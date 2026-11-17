@@ -1,0 +1,81 @@
+package com.ignatrozhko.governedworkflow.ui.workspace.sections
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.ignatrozhko.governedworkflow.data.api.Comment
+import com.ignatrozhko.governedworkflow.data.api.ReviewResolution
+import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
+import com.ignatrozhko.governedworkflow.data.api.reviewComments
+import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
+import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
+import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
+import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
+
+/** Review findings grouped by file; tapping one opens that file's diff at the commented lines. */
+@Composable
+fun ReviewSection(
+    state: WorkspaceState,
+    viewModel: WorkspaceViewModel,
+    isBusy: Boolean,
+    onOpenFile: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var isHidingResolved by rememberSaveable { mutableStateOf(true) }
+    var isChoosingResolution by remember { mutableStateOf(false) }
+    val issues = state.reviewComments().filter { !isHidingResolved || !it.resolved }
+    LazyColumn(modifier, contentPadding = SectionContentPadding, verticalArrangement = SectionSpacing) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(selected = isHidingResolved, onClick = { isHidingResolved = !isHidingResolved }, label = { Text("Hide resolved") })
+                TextButton(onClick = { isChoosingResolution = true }, enabled = !isBusy) { Text("Resolve all") }
+            }
+        }
+        if (issues.isEmpty()) item { EmptySection("No review issues.") }
+        issues.groupBy { it.filePath ?: it.target }.forEach { (file, fileIssues) ->
+            item(key = file) { Text(file, style = MaterialTheme.typography.titleSmall) }
+            items(fileIssues, key = Comment::id) { issue ->
+                CommentCard(issue, viewModel::resolveComment, onOpen = { onOpenFile(file) })
+            }
+        }
+    }
+    if (isChoosingResolution) {
+        ResolutionDialog(onDismiss = { isChoosingResolution = false }) {
+            isChoosingResolution = false
+            viewModel.resolveAllReviewIssues(it)
+        }
+    }
+}
+
+@Composable
+private fun ResolutionDialog(onDismiss: () -> Unit, onChoose: (ReviewResolution) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Resolve all open issues as") },
+        text = {
+            Column {
+                ReviewResolution.entries.forEach { resolution ->
+                    OutlinedButton(onClick = { onChoose(resolution) }) { Text(resolution.label) }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}

@@ -11,6 +11,9 @@ internal object PanelPaths {
     fun projectWorkspaces(base: HttpUrl, projectId: String): HttpUrl =
         base.newBuilder().addPathSegments("api/projects").addPathSegment(projectId).addPathSegment("workspaces").build()
 
+    fun project(base: HttpUrl, projectId: String, suffix: String): HttpUrl =
+        base.newBuilder().addPathSegments("api/projects").addPathSegment(projectId).addPathSegments(suffix).build()
+
     fun workspace(base: HttpUrl, workspace: WorkspaceRef, suffix: String): HttpUrl =
         base.newBuilder()
             .addPathSegments("api/ws")

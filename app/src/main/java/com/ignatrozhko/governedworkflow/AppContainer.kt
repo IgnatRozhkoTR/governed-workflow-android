@@ -7,15 +7,17 @@ import com.ignatrozhko.governedworkflow.connection.ConnectionManager
 import com.ignatrozhko.governedworkflow.connection.NetworkMonitor
 import com.ignatrozhko.governedworkflow.connection.PanelProbe
 import com.ignatrozhko.governedworkflow.data.api.PanelApi
+import com.ignatrozhko.governedworkflow.data.api.PanelJson
 import com.ignatrozhko.governedworkflow.data.server.ServerRepository
 import com.ignatrozhko.governedworkflow.data.server.TokenCipher
 import com.ignatrozhko.governedworkflow.data.settings.AppSettings
+import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
 import com.ignatrozhko.governedworkflow.discovery.LanScanner
+import com.ignatrozhko.governedworkflow.gates.WorkspaceLinks
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalSocketOpener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -23,10 +25,7 @@ import java.util.concurrent.TimeUnit
 /** Process-wide dependencies, built once by [GovernedWorkflowApp]. */
 class AppContainer(context: Context) {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val json = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-    }
+    private val json = PanelJson
     private val dataStore = PreferenceDataStoreFactory.create {
         context.preferencesDataStoreFile(DATA_STORE_NAME)
     }
@@ -54,6 +53,9 @@ class AppContainer(context: Context) {
         networkMonitor = networkMonitor,
         apiFactory = { baseUrl, token -> PanelApi(baseUrl.toHttpUrl(), token, httpClient, json) },
     ).also { it.start() }
+
+    val workspaceStateStore = WorkspaceStateStore(connectionManager, applicationScope)
+    val workspaceLinks = WorkspaceLinks()
 
     val terminalSocketOpener = TerminalSocketOpener { target, listener ->
         socketClient.newWebSocket(target.socketRequest(connectionManager.requireApi()), listener)

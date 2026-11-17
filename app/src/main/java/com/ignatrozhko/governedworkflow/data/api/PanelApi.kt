@@ -88,10 +88,10 @@ class PanelApi(
     fun namedTerminalSocket(sessionName: String): Request =
         Request.Builder().url(PanelPaths.namedTerminalSocket(baseUrl, sessionName, token)).build()
 
-    private suspend fun <T> get(url: HttpUrl, deserializer: DeserializationStrategy<T>): T =
+    internal suspend fun <T> get(url: HttpUrl, deserializer: DeserializationStrategy<T>): T =
         decode(execute(authorized(url).get().build()), deserializer)
 
-    private suspend fun send(method: String, url: HttpUrl, body: JsonObject): HttpResult {
+    internal suspend fun send(method: String, url: HttpUrl, body: JsonObject): HttpResult {
         val requestBody = json.encodeToString(JsonObject.serializer(), body).toRequestBody(JSON_MEDIA_TYPE)
         return execute(authorized(url).method(method, requestBody).build())
     }
@@ -112,7 +112,7 @@ class PanelApi(
         return result
     }
 
-    private fun <T> decode(result: HttpResult, deserializer: DeserializationStrategy<T>): T = try {
+    internal fun <T> decode(result: HttpResult, deserializer: DeserializationStrategy<T>): T = try {
         json.decodeFromString(deserializer, result.body)
     } catch (error: SerializationException) {
         throw MalformedResponseException("The admin panel returned an unexpected response.", error)
@@ -139,12 +139,13 @@ class PanelApi(
         return message ?: result.body.trim().ifEmpty { "HTTP ${result.code}" }
     }
 
-    private companion object {
-        const val HTTP_UNAUTHORIZED = 401
-        const val HTTP_NOT_MODIFIED = 304
-        val HTTP_SUCCESS = 200..299
-        val JSON_MEDIA_TYPE = "application/json".toMediaType()
+    internal companion object {
         val EMPTY_BODY = JsonObject(emptyMap())
-        val ERROR_MESSAGE_FIELDS = listOf("details", "reason", "message", "error")
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_NOT_MODIFIED = 304
+        private val HTTP_SUCCESS = 200..299
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
+
+        private val ERROR_MESSAGE_FIELDS = listOf("details", "reason", "message", "error")
     }
 }

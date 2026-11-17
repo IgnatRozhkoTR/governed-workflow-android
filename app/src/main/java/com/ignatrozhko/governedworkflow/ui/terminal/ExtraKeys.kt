@@ -1,5 +1,7 @@
 package com.ignatrozhko.governedworkflow.ui.terminal
 
+import androidx.annotation.DrawableRes
+import com.ignatrozhko.governedworkflow.R
 import com.ignatrozhko.governedworkflow.terminal.core.Modifiers
 import com.ignatrozhko.governedworkflow.terminal.core.StickyKey
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalKey
@@ -14,39 +16,52 @@ sealed interface ExtraKeyAction {
     data object ToggleKeyboard : ExtraKeyAction
 }
 
-data class ExtraKey(val label: String, val action: ExtraKeyAction, val isRepeatable: Boolean = false)
+/** A key shows [iconRes] when set, otherwise [label]; the label doubles as the icon's content description. */
+data class ExtraKey(
+    val label: String,
+    val action: ExtraKeyAction,
+    val isRepeatable: Boolean = false,
+    @param:DrawableRes val iconRes: Int? = null,
+)
 
-/** Two rows whose columns line up so the arrow keys form an inverted T. */
 object ExtraKeyLayout {
     private const val ESC = "\u001b"
     private const val CTRL_C = "\u0003"
 
-    val rows: List<List<ExtraKey>> = listOf(
+    private val escape = ExtraKey("Esc", ExtraKeyAction.Key(TerminalKey.Escape))
+    private val shiftTab = ExtraKey("⇧Tab", ExtraKeyAction.Key(TerminalKey.Tab, Modifiers(shift = true)))
+    private val slash = ExtraKey("/", ExtraKeyAction.Text("/"))
+    private val dash = ExtraKey("-", ExtraKeyAction.Text("-"))
+    private val pipe = ExtraKey("|", ExtraKeyAction.Text("|"))
+    private val tilde = ExtraKey("~", ExtraKeyAction.Text("~"))
+    private val home = ExtraKey("Home", ExtraKeyAction.Key(TerminalKey.Home))
+    private val up = ExtraKey("↑", ExtraKeyAction.Key(TerminalKey.Up), isRepeatable = true)
+    private val end = ExtraKey("End", ExtraKeyAction.Key(TerminalKey.End))
+    private val pageUp = ExtraKey("PgUp", ExtraKeyAction.Key(TerminalKey.PageUp), isRepeatable = true)
+    private val paste = ExtraKey("Paste", ExtraKeyAction.Paste, iconRes = R.drawable.ic_paste)
+    private val tab = ExtraKey("Tab", ExtraKeyAction.Key(TerminalKey.Tab))
+    private val ctrl = ExtraKey("Ctrl", ExtraKeyAction.Sticky(StickyKey.Ctrl))
+    private val alt = ExtraKey("Alt", ExtraKeyAction.Sticky(StickyKey.Alt))
+    private val interrupt = ExtraKey("^C", ExtraKeyAction.Raw(CTRL_C))
+    private val doubleEscape = ExtraKey("Esc²", ExtraKeyAction.Raw(ESC + ESC))
+    private val enter = ExtraKey("↵", ExtraKeyAction.Key(TerminalKey.Enter))
+    private val left = ExtraKey("←", ExtraKeyAction.Key(TerminalKey.Left), isRepeatable = true)
+    private val down = ExtraKey("↓", ExtraKeyAction.Key(TerminalKey.Down), isRepeatable = true)
+    private val right = ExtraKey("→", ExtraKeyAction.Key(TerminalKey.Right), isRepeatable = true)
+    private val pageDown = ExtraKey("PgDn", ExtraKeyAction.Key(TerminalKey.PageDown), isRepeatable = true)
+    private val keyboard = ExtraKey("Keyboard", ExtraKeyAction.ToggleKeyboard, iconRes = R.drawable.ic_keyboard)
+
+    /** Two rows whose columns line up so the arrow keys form an inverted T. */
+    val twoRows: List<List<ExtraKey>> = listOf(
+        listOf(escape, shiftTab, slash, dash, pipe, tilde, home, up, end, pageUp, paste),
+        listOf(tab, ctrl, alt, interrupt, doubleEscape, enter, left, down, right, pageDown, keyboard),
+    )
+
+    /** Landscape with the keyboard up leaves room for one row, so the most used keys come first. */
+    val oneRow: List<List<ExtraKey>> = listOf(
         listOf(
-            ExtraKey("Esc", ExtraKeyAction.Key(TerminalKey.Escape)),
-            ExtraKey("⇧Tab", ExtraKeyAction.Key(TerminalKey.Tab, Modifiers(shift = true))),
-            ExtraKey("/", ExtraKeyAction.Text("/")),
-            ExtraKey("-", ExtraKeyAction.Text("-")),
-            ExtraKey("|", ExtraKeyAction.Text("|")),
-            ExtraKey("~", ExtraKeyAction.Text("~")),
-            ExtraKey("Home", ExtraKeyAction.Key(TerminalKey.Home)),
-            ExtraKey("↑", ExtraKeyAction.Key(TerminalKey.Up), isRepeatable = true),
-            ExtraKey("End", ExtraKeyAction.Key(TerminalKey.End)),
-            ExtraKey("PgUp", ExtraKeyAction.Key(TerminalKey.PageUp), isRepeatable = true),
-            ExtraKey("Paste", ExtraKeyAction.Paste),
-        ),
-        listOf(
-            ExtraKey("Tab", ExtraKeyAction.Key(TerminalKey.Tab)),
-            ExtraKey("Ctrl", ExtraKeyAction.Sticky(StickyKey.Ctrl)),
-            ExtraKey("Alt", ExtraKeyAction.Sticky(StickyKey.Alt)),
-            ExtraKey("^C", ExtraKeyAction.Raw(CTRL_C)),
-            ExtraKey("Esc²", ExtraKeyAction.Raw(ESC + ESC)),
-            ExtraKey("↵", ExtraKeyAction.Key(TerminalKey.Enter)),
-            ExtraKey("←", ExtraKeyAction.Key(TerminalKey.Left), isRepeatable = true),
-            ExtraKey("↓", ExtraKeyAction.Key(TerminalKey.Down), isRepeatable = true),
-            ExtraKey("→", ExtraKeyAction.Key(TerminalKey.Right), isRepeatable = true),
-            ExtraKey("PgDn", ExtraKeyAction.Key(TerminalKey.PageDown), isRepeatable = true),
-            ExtraKey("⌨", ExtraKeyAction.ToggleKeyboard),
+            escape, tab, ctrl, alt, interrupt, left, up, down, right, enter, shiftTab,
+            home, end, pageUp, pageDown, slash, dash, pipe, tilde, doubleEscape, paste, keyboard,
         ),
     )
 }

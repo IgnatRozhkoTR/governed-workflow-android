@@ -22,4 +22,4 @@ data object ProjectsRoute
 data class WorkspacesRoute(val projectId: String, val projectName: String)
 
 @Serializable
-data class WorkspaceRoute(val projectId: String, val branch: String)
+data class WorkspaceRoute(val projectId: String, val branch: String, val initialSection: String? = null)

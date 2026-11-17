@@ -2,13 +2,19 @@ package com.ignatrozhko.governedworkflow.ui.terminal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,14 +40,26 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Termux-style key rows; touches never take focus away from the terminal, so the keyboard stays up. */
+/**
+ * Termux-style key rows; touches never take focus away from the terminal, so the keyboard stays up.
+ * Keys share the width evenly until they would get narrower than [MIN_KEY_WIDTH]; then the rows scroll sideways.
+ */
 @Composable
-fun ExtraKeysBar(stickyModifiers: StickyModifiers, onAction: (ExtraKeyAction) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow).padding(2.dp)) {
-        ExtraKeyLayout.rows.forEach { row ->
-            Row(Modifier.fillMaxWidth()) {
-                row.forEach { key ->
-                    ExtraKeyButton(key, stickyModifiers.levelOf(key.action), onAction, Modifier.weight(1f))
+fun ExtraKeysBar(
+    rows: List<List<ExtraKey>>,
+    stickyModifiers: StickyModifiers,
+    onAction: (ExtraKeyAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow).padding(2.dp)) {
+        val isScrolling = maxWidth / rows.maxOf { it.size } < MIN_KEY_WIDTH
+        Column(if (isScrolling) Modifier.horizontalScroll(rememberScrollState()) else Modifier.fillMaxWidth()) {
+            rows.forEach { row ->
+                Row(if (isScrolling) Modifier else Modifier.fillMaxWidth()) {
+                    row.forEach { key ->
+                        val keyModifier = if (isScrolling) Modifier.width(MIN_KEY_WIDTH) else Modifier.weight(1f)
+                        ExtraKeyButton(key, stickyModifiers.levelOf(key.action), onAction, keyModifier)
+                    }
                 }
             }
         }
@@ -77,14 +96,12 @@ private fun ExtraKeyButton(key: ExtraKey, stickyLevel: StickyLevel, onAction: (E
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            key.label,
-            fontSize = 12.sp,
-            softWrap = false,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            color = if (stickyLevel == StickyLevel.Locked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        )
+        val contentColor = if (stickyLevel == StickyLevel.Locked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+        if (key.iconRes != null) {
+            Icon(painterResource(key.iconRes), contentDescription = key.label, tint = contentColor, modifier = Modifier.size(18.dp))
+        } else {
+            Text(key.label, fontSize = 12.sp, softWrap = false, textAlign = TextAlign.Center, maxLines = 1, color = contentColor)
+        }
     }
 }
 
@@ -103,5 +120,6 @@ private fun StickyModifiers.levelOf(action: ExtraKeyAction): StickyLevel = when 
 }
 
 private val KEY_HEIGHT = 40.dp
+private val MIN_KEY_WIDTH = 34.dp
 private const val REPEAT_START_DELAY_MS = 400L
 private const val REPEAT_INTERVAL_MS = 60L

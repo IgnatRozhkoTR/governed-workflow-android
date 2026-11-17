@@ -42,17 +42,28 @@ data class PendingGate(
     @SerialName("accepts_commit_message") val acceptsCommitMessage: Boolean = false,
 )
 
-/** The subset of `GET /api/ws/<project>/<branch>/state` the mobile client renders. */
+/** `GET /api/ws/<project>/<branch>/state`: the single source every workspace section renders from. */
 @Serializable
 data class WorkspaceState(
     val phase: String,
     val status: String = "",
     val branch: String = "",
+    @SerialName("workspace_id") val workspaceId: Long = 0,
     @SerialName("source_branch") val sourceBranch: String? = null,
     @SerialName("workflow_mode") val workflowMode: String = "",
+    @SerialName("review_mode") val reviewMode: String = "",
     @SerialName("plan_status") val planStatus: String? = null,
     @SerialName("yolo_mode") val yoloMode: Boolean = false,
     @SerialName("pending_gate") val pendingGate: PendingGate? = null,
+    @SerialName("available_phases") val availablePhases: List<String> = emptyList(),
+    @SerialName("phaseHistory") val phaseHistory: List<PhaseTransition> = emptyList(),
+    val plan: Plan? = null,
+    val scope: Map<String, PhaseScope> = emptyMap(),
+    val research: List<ResearchEntry> = emptyList(),
+    val progress: Map<String, ProgressEntry> = emptyMap(),
+    @SerialName("impact_analysis") val impactAnalysis: Map<String, String> = emptyMap(),
+    val discussions: List<Discussion> = emptyList(),
+    val comments: Map<String, List<Comment>> = emptyMap(),
 )
 
 sealed interface StateFetch {
@@ -64,6 +75,7 @@ sealed interface StateFetch {
 data class WorkspaceContext(
     @SerialName("ticket_id") val ticketId: String = "",
     @SerialName("ticket_name") val ticketName: String = "",
+    @SerialName("context") val description: String = "",
 )
 
 @Serializable

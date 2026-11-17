@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface ConnectionState {
     data object NoServer : ConnectionState
@@ -72,6 +75,11 @@ class ConnectionManager(
 
     fun requireApi(): PanelApi =
         (state.value as? ConnectionState.Connected)?.api ?: throw NotConnectedException()
+
+    /** For background work that can start in a cold process, before the first probe has bound a URL. */
+    suspend fun awaitApi(timeoutMillis: Long): PanelApi =
+        withTimeoutOrNull(timeoutMillis) { state.filterIsInstance<ConnectionState.Connected>().first().api }
+            ?: throw NotConnectedException()
 
     private suspend fun connect(selected: ServerCredentials?) {
         credentials = selected

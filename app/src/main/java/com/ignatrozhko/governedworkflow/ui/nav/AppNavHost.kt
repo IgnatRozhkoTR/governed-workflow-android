@@ -3,9 +3,12 @@ package com.ignatrozhko.governedworkflow.ui.nav
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,6 +21,7 @@ import com.ignatrozhko.governedworkflow.ui.servers.LanScanScreen
 import com.ignatrozhko.governedworkflow.ui.servers.ServerEditorScreen
 import com.ignatrozhko.governedworkflow.ui.servers.ServersScreen
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceScreen
+import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceSection
 import com.ignatrozhko.governedworkflow.ui.workspaces.WorkspacesScreen
 import kotlinx.coroutines.flow.first
 
@@ -32,6 +36,13 @@ fun AppNavHost(container: AppContainer) {
         return
     }
     val navController = rememberNavController()
+    val linkedWorkspace by container.workspaceLinks.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(linkedWorkspace) {
+        linkedWorkspace?.let { workspace ->
+            container.workspaceLinks.consume()
+            navController.openLinkedWorkspace(workspace)
+        }
+    }
     NavHost(navController = navController, startDestination = start) {
         composable<ServersRoute> {
             ServersScreen(
@@ -65,6 +76,9 @@ fun AppNavHost(container: AppContainer) {
             WorkspacesScreen(
                 title = route.projectName,
                 onOpenWorkspace = { branch -> navController.navigate(WorkspaceRoute(route.projectId, branch)) },
+                onWorkspaceCreated = { branch ->
+                    navController.navigate(WorkspaceRoute(route.projectId, branch, initialSection = WorkspaceSection.Settings.name))
+                },
                 onManageServers = { navController.navigate(ServersRoute) },
                 onBack = navController::popBackStack,
             )
@@ -73,6 +87,7 @@ fun AppNavHost(container: AppContainer) {
             val route = entry.toRoute<WorkspaceRoute>()
             WorkspaceScreen(
                 workspace = WorkspaceRef(route.projectId, route.branch),
+                initialSection = route.initialSection?.let(WorkspaceSection::valueOf),
                 onManageServers = { navController.navigate(ServersRoute) },
                 onBack = navController::popBackStack,
             )
@@ -82,4 +97,14 @@ fun AppNavHost(container: AppContainer) {
 
 private fun NavHostController.showProjectsAsRoot() {
     navigate(ProjectsRoute) { popUpTo(graph.id) { inclusive = true } }
+}
+
+/**
+ * Single-top matching compares only the destination, not its arguments, so it would reuse an open workspace's entry
+ * (and its view models) for a different workspace. Only a link to the workspace already on top is a no-op.
+ */
+private fun NavHostController.openLinkedWorkspace(workspace: WorkspaceRef) {
+    val top = currentBackStackEntry?.takeIf { it.destination.hasRoute<WorkspaceRoute>() }?.toRoute<WorkspaceRoute>()
+    if (top?.projectId == workspace.projectId && top.branch == workspace.branch) return
+    navigate(WorkspaceRoute(workspace.projectId, workspace.branch))
 }

@@ -10,11 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,12 +37,24 @@ import com.ignatrozhko.governedworkflow.ui.common.GateBadge
 fun WorkspacesScreen(
     title: String,
     onOpenWorkspace: (String) -> Unit,
+    onWorkspaceCreated: (String) -> Unit,
     onManageServers: () -> Unit,
     onBack: () -> Unit,
     viewModel: WorkspacesViewModel = viewModel(factory = WorkspacesViewModel.Factory),
 ) {
     val state by viewModel.workspaces.collectAsStateWithLifecycle()
-    Scaffold(topBar = { PanelTopBar(title = title, onBack = onBack, onManageServers = onManageServers) }) { padding ->
+    val creation by viewModel.creation.collectAsStateWithLifecycle()
+    CreationFlow(creation, viewModel, onWorkspaceCreated)
+    Scaffold(
+        topBar = { PanelTopBar(title = title, onBack = onBack, onManageServers = onManageServers) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = viewModel::startCreating,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("New") },
+            )
+        },
+    ) { padding ->
         LoadStateContent(
             state = state,
             isRefreshing = false,
@@ -54,6 +71,18 @@ fun WorkspacesScreen(
                 items(rows, key = { it.summary.id }) { row -> WorkspaceCard(row) { onOpenWorkspace(row.summary.branch) } }
             }
         }
+    }
+}
+
+@Composable
+private fun CreationFlow(creation: WorkspaceCreation, viewModel: WorkspacesViewModel, onWorkspaceCreated: (String) -> Unit) {
+    when (creation) {
+        is WorkspaceCreation.Editing -> CreateWorkspaceDialog(creation, viewModel::create, viewModel::dismissCreation)
+        is WorkspaceCreation.Created -> LaunchedEffect(creation) {
+            viewModel.dismissCreation()
+            onWorkspaceCreated(creation.branch)
+        }
+        WorkspaceCreation.Idle, WorkspaceCreation.Loading -> Unit
     }
 }
 

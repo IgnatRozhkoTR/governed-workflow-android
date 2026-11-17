@@ -1,7 +1,6 @@
 package com.ignatrozhko.governedworkflow.data.api
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -21,7 +20,7 @@ class PanelApiTest {
     @Before
     fun setUp() {
         server.start()
-        api = PanelApi(server.url("/"), "secret-token", OkHttpClient(), Json { ignoreUnknownKeys = true; explicitNulls = false })
+        api = PanelApi(server.url("/"), "secret-token", OkHttpClient(), PanelJson)
     }
 
     @After
@@ -95,6 +94,26 @@ class PanelApiTest {
 
         assertNull(state.pendingGate)
         assertTrue(state.yoloMode)
+    }
+
+    @Test
+    fun getState_shouldDecodeFreshWorkspace_whenOptionalSectionsAreNullOrBlank() = runTest {
+        respond(200, """{"phase":"0","impact_analysis":null,"plan":{"description":"","execution":[],"systemDiagram":""}}""")
+
+        val state = (api.getState(workspace, null) as StateFetch.Fresh).state
+
+        assertEquals("0", state.phase)
+        assertTrue(state.impactAnalysis.isEmpty())
+        assertEquals(emptyList<PlanDiagram>(), state.plan?.diagrams)
+    }
+
+    @Test
+    fun getState_shouldReadBareDiagramString_asOneUntitledDiagram() = runTest {
+        respond(200, """{"phase":"2.0","plan":{"systemDiagram":"graph TD; A-->B"}}""")
+
+        val state = (api.getState(workspace, null) as StateFetch.Fresh).state
+
+        assertEquals(listOf(PlanDiagram(title = "", diagram = "graph TD; A-->B")), state.plan?.diagrams)
     }
 
     @Test

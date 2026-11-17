@@ -31,7 +31,9 @@ fun ProjectsScreen(
     viewModel: ProjectsViewModel = viewModel(factory = ProjectsViewModel.Factory),
 ) {
     val state by viewModel.projects.collectAsStateWithLifecycle()
-    Scaffold(topBar = { PanelTopBar(title = "Projects", onBack = null, onManageServers = onManageServers) }) { padding ->
+    Scaffold(
+        topBar = { PanelTopBar(title = "Projects", onBack = null, onManageServers = onManageServers, actions = { GateWatchToggle() }) },
+    ) { padding ->
         LoadStateContent(
             state = state,
             isRefreshing = false,
