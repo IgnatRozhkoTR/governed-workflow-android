@@ -17,14 +17,15 @@ import com.ignatrozhko.governedworkflow.data.api.listCriteria
 import com.ignatrozhko.governedworkflow.data.api.validateCriterion
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
 import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
 import com.ignatrozhko.governedworkflow.ui.workspace.common.StatusPill
+import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
 
 class CriteriaViewModel(workspace: WorkspaceRef, connectionManager: ConnectionManager, stateStore: WorkspaceStateStore) :
     SectionDataViewModel<List<Criterion>>(workspace, connectionManager, stateStore) {
@@ -48,11 +49,12 @@ fun CriteriaSection(criteria: List<Criterion>, isBusy: Boolean, onValidate: (Lon
 /** Only custom criteria are checked by a person; test and lint criteria are validated by running them. */
 @Composable
 private fun CriterionCard(criterion: Criterion, isBusy: Boolean, onValidate: (Long, Boolean) -> Unit) {
-    SectionCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatusPill(criterion.type.replace('_', ' '), PanelColors.Indigo)
-            ValidationPill(criterion.validated)
-        }
+    CollapsibleCard(
+        title = previewLine(criterion.description).ifBlank { "Criterion ${criterion.id}" },
+        memoryKey = "criterion:${criterion.id}",
+        subtitle = criterion.type.replace('_', ' '),
+        badge = { ValidationPill(criterion.validated) },
+    ) {
         MarkdownText(criterion.description)
         criterion.validationMessage?.takeIf { it.isNotBlank() }?.let { SecondaryText(it) }
         criterion.details?.forEach { (key, value) -> SecondaryText("${key.replace('_', ' ')}: ${value.toString().trim('"')}") }

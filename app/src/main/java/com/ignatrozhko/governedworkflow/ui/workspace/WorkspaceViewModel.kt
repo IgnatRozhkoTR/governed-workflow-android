@@ -17,6 +17,7 @@ import com.ignatrozhko.governedworkflow.data.api.setResearchProven
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
 import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.loadWhenConnected
+import com.ignatrozhko.governedworkflow.ui.workspace.common.ExpansionMemory
 import com.ignatrozhko.governedworkflow.ui.workspace.common.WorkspaceActionsViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,7 @@ class WorkspaceViewModel(
     val context: StateFlow<WorkspaceContext?> = _context.asStateFlow()
     val isArchived: StateFlow<Boolean> = _isArchived.asStateFlow()
     val phaseNames: StateFlow<PhaseNames> = _phaseNames.asStateFlow()
+    val expansionMemory = ExpansionMemory()
 
     init {
         viewModelScope.launch {

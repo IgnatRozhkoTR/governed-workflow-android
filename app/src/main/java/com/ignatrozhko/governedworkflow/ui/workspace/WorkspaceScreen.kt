@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import com.ignatrozhko.governedworkflow.ui.terminal.TerminalChrome
 import com.ignatrozhko.governedworkflow.ui.terminal.TerminalTab
 import com.ignatrozhko.governedworkflow.ui.terminal.TerminalViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
+import com.ignatrozhko.governedworkflow.ui.workspace.common.LocalExpansionMemory
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -103,7 +105,9 @@ fun WorkspaceScreen(workspace: WorkspaceRef, initialSection: WorkspaceSection?, 
             if (isNavigationShown && isLandscape) WorkspaceNavigationRail(tab) { tab = it }
             val contentModifier = Modifier.weight(1f).imePadding()
             when (tab) {
-                WorkspaceTab.Overview -> OverviewContent(section, workspaceViewModel, navigation, snackbarHostState, contentModifier)
+                WorkspaceTab.Overview -> CompositionLocalProvider(LocalExpansionMemory provides workspaceViewModel.expansionMemory) {
+                    OverviewContent(section, workspaceViewModel, navigation, snackbarHostState, contentModifier)
+                }
                 WorkspaceTab.Changes -> ChangesTab(changesViewModel, onManageServers, contentModifier)
                 WorkspaceTab.Terminal -> TerminalTab(
                     viewModel = terminalViewModel,

@@ -1,17 +1,23 @@
 package com.ignatrozhko.governedworkflow.ui.workspace.sections
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.Comment
 import com.ignatrozhko.governedworkflow.data.api.CommentTargets
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
+import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
+import com.ignatrozhko.governedworkflow.ui.workspace.common.subtitleOf
 
 /** Where an open comment lives; tapping it jumps there. */
 sealed interface CommentLocation {
@@ -42,10 +48,19 @@ fun CommentsHubSection(
     }
     LazyColumn(modifier, contentPadding = SectionContentPadding) {
         open.groupBy { it.scope }.forEach { (scope, comments) ->
-            item(key = "scope:$scope") { Text(scope.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall) }
+            item(key = "scope:$scope") {
+                Text(scope.replaceFirstChar { it.uppercase() }, Modifier.padding(top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall)
+            }
             items(comments, key = { it.id }) { comment ->
-                Text(locationLabel(comment), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                CommentCard(comment, onResolve, onOpen = { onJump(CommentLocation.of(comment)) })
+                CollapsibleCard(
+                    title = previewLine(comment.text).ifBlank { "Comment" },
+                    memoryKey = "comments:${comment.id}",
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    subtitle = subtitleOf(locationLabel(comment), comment.author),
+                ) {
+                    CommentCard(comment, onResolve)
+                    TextButton(onClick = { onJump(CommentLocation.of(comment)) }) { Text("Go to ${comment.scope}") }
+                }
             }
         }
     }

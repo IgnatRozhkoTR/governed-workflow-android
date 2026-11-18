@@ -3,6 +3,7 @@ package com.ignatrozhko.governedworkflow.ui.workspace.sections
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -14,31 +15,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.ignatrozhko.governedworkflow.data.api.Discussion
+import com.ignatrozhko.governedworkflow.data.api.ResearchEntry
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleSection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
 import com.ignatrozhko.governedworkflow.ui.workspace.common.TextInputDialog
+import com.ignatrozhko.governedworkflow.ui.workspace.common.countLabel
+import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
+import com.ignatrozhko.governedworkflow.ui.workspace.common.subtitleOf
 
 /** Phase 1 output: research summaries, the impact analysis and the open discussions with Claude. */
 @Composable
 fun PrePlanningSection(state: WorkspaceState, viewModel: WorkspaceViewModel, modifier: Modifier = Modifier) {
     var isAsking by remember { mutableStateOf(false) }
     LazyColumn(modifier, contentPadding = SectionContentPadding, verticalArrangement = SectionSpacing) {
-        item {
-            SectionCard(title = "Research summaries") {
-                if (state.research.isEmpty()) SecondaryText("No research yet.")
-                state.research.forEach { entry ->
-                    Text(entry.topic, style = MaterialTheme.typography.bodyLarge)
-                    SecondaryText(entry.summary)
-                }
-            }
-        }
-        item { ImpactAnalysisCard(state.impactAnalysis) }
-        item {
+        item(key = "research") { ResearchSummariesCard(state.research) }
+        item(key = "impact") { ImpactAnalysisCard(state.impactAnalysis) }
+        item(key = "discussions-label") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Discussions", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 TextButton(onClick = { isAsking = true }) { Text("New question") }
@@ -56,13 +54,34 @@ fun PrePlanningSection(state: WorkspaceState, viewModel: WorkspaceViewModel, mod
 }
 
 @Composable
+private fun ResearchSummariesCard(research: List<ResearchEntry>) {
+    CollapsibleCard(title = "Research summaries", memoryKey = "preplanning:research", subtitle = countLabel(research.size, "topic")) {
+        if (research.isEmpty()) SecondaryText("No research yet.")
+        research.forEachIndexed { index, entry ->
+            if (index > 0) HorizontalDivider()
+            CollapsibleSection(
+                title = entry.topic,
+                memoryKey = "preplanning:research:${entry.id}",
+                subtitle = previewLine(entry.summary),
+                titleStyle = MaterialTheme.typography.bodyMedium,
+            ) { MarkdownText(entry.summary) }
+        }
+    }
+}
+
+@Composable
 private fun ImpactAnalysisCard(analysis: Map<String, String>) {
-    SectionCard(title = "Impact analysis") {
-        val filled = analysis.filterValues { it.isNotBlank() }
+    val filled = analysis.filterValues { it.isNotBlank() }
+    CollapsibleCard(title = "Impact analysis", memoryKey = "preplanning:impact", subtitle = "${filled.size} of ${analysis.size} recorded") {
         if (filled.isEmpty()) SecondaryText("Not recorded yet.")
-        filled.forEach { (field, value) ->
-            Text(field.replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelLarge)
-            MarkdownText(value)
+        filled.entries.forEachIndexed { index, (field, value) ->
+            if (index > 0) HorizontalDivider()
+            CollapsibleSection(
+                title = field.replace('_', ' ').replaceFirstChar { it.uppercase() },
+                memoryKey = "preplanning:impact:$field",
+                subtitle = previewLine(value),
+                titleStyle = MaterialTheme.typography.bodyMedium,
+            ) { MarkdownText(value) }
         }
     }
 }
@@ -70,8 +89,11 @@ private fun ImpactAnalysisCard(analysis: Map<String, String>) {
 @Composable
 private fun DiscussionCard(discussion: Discussion, onReply: (Long, String) -> Unit) {
     var isReplying by remember { mutableStateOf(false) }
-    SectionCard {
-        SecondaryText(listOf(discussion.author, discussion.type, discussion.status).filter { it.isNotEmpty() }.joinToString(" · "))
+    CollapsibleCard(
+        title = previewLine(discussion.text).ifBlank { "Discussion" },
+        memoryKey = "discussion:${discussion.id}",
+        subtitle = subtitleOf(discussion.author, discussion.type, discussion.status, countLabel(discussion.replies.size, "reply", "replies")),
+    ) {
         MarkdownText(discussion.text)
         discussion.replies.forEach { reply -> SecondaryText("↳ ${reply.author}: ${reply.text}") }
         TextButton(onClick = { isReplying = true }) { Text("Reply") }

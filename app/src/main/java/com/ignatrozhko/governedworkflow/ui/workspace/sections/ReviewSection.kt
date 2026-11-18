@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,10 +22,12 @@ import com.ignatrozhko.governedworkflow.data.api.ReviewResolution
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.reviewComments
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
+import com.ignatrozhko.governedworkflow.ui.workspace.common.subtitleOf
 
 /** Review findings grouped by file; tapping one opens that file's diff at the commented lines. */
 @Composable
@@ -48,11 +49,8 @@ fun ReviewSection(
             }
         }
         if (issues.isEmpty()) item { EmptySection("No review issues.") }
-        issues.groupBy { it.filePath ?: it.target }.forEach { (file, fileIssues) ->
-            item(key = file) { Text(file, style = MaterialTheme.typography.titleSmall) }
-            items(fileIssues, key = Comment::id) { issue ->
-                CommentCard(issue, viewModel::resolveComment, onOpen = { onOpenFile(file) })
-            }
+        items(issues.groupBy { it.filePath ?: it.target }.toList(), key = { it.first }) { (file, fileIssues) ->
+            ReviewFileCard(file, fileIssues, viewModel::resolveComment) { onOpenFile(file) }
         }
     }
     if (isChoosingResolution) {
@@ -60,6 +58,19 @@ fun ReviewSection(
             isChoosingResolution = false
             viewModel.resolveAllReviewIssues(it)
         }
+    }
+}
+
+/** One card per file: the name and open count stay visible, the findings open on tap. */
+@Composable
+private fun ReviewFileCard(file: String, issues: List<Comment>, onResolve: (Long, Boolean) -> Unit, onOpenFile: () -> Unit) {
+    CollapsibleCard(
+        title = file.substringAfterLast('/'),
+        memoryKey = "review:file:$file",
+        subtitle = subtitleOf(file.substringBeforeLast('/', missingDelimiterValue = ""), "${issues.count { !it.resolved }} of ${issues.size} open"),
+    ) {
+        issues.forEach { CommentCard(it, onResolve, onOpen = onOpenFile) }
+        TextButton(onClick = onOpenFile) { Text("Open diff") }
     }
 }
 

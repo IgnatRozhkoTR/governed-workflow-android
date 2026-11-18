@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.connection.ConnectionManager
@@ -20,14 +18,15 @@ import com.ignatrozhko.governedworkflow.data.api.listProposals
 import com.ignatrozhko.governedworkflow.data.api.resolveProposal
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
 import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
 import com.ignatrozhko.governedworkflow.ui.workspace.common.StatusPill
+import com.ignatrozhko.governedworkflow.ui.workspace.common.subtitleOf
 
 class ReflectionViewModel(workspace: WorkspaceRef, connectionManager: ConnectionManager, stateStore: WorkspaceStateStore) :
     SectionDataViewModel<List<Proposal>>(workspace, connectionManager, stateStore) {
@@ -52,12 +51,12 @@ fun ReflectionSection(proposals: List<Proposal>, isBusy: Boolean, onResolve: (Lo
 
 @Composable
 private fun ProposalCard(proposal: Proposal, isBusy: Boolean, onResolve: (Long, ProposalDecision) -> Unit) {
-    SectionCard {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(proposal.title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            StatusPill(proposal.status, proposalStatusColor(proposal.status))
-        }
-        SecondaryText(listOf(proposal.type, proposal.origin).filter { it.isNotEmpty() }.joinToString(" · "))
+    CollapsibleCard(
+        title = proposal.title,
+        memoryKey = "proposal:${proposal.id}",
+        subtitle = subtitleOf(proposal.type, proposal.origin),
+        badge = { StatusPill(proposal.status, proposalStatusColor(proposal.status)) },
+    ) {
         MarkdownText(proposal.body)
         if (proposal.reason.isNotBlank()) SecondaryText("Why: ${proposal.reason}")
         if (proposal.isOpen) {
