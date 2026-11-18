@@ -11,10 +11,13 @@ import com.ignatrozhko.governedworkflow.terminal.core.TextEdit
 /**
  * IME bridge in the spirit of Termux: the editable stays (nearly) empty so keyboards never try to
  * autocorrect terminal content; composing text is mirrored eagerly and committed text is sent as typed.
+ * Multi-line text, such as a dictated paragraph, goes to [onInsertedText] so it arrives as a paste and a
+ * line break inside it does not submit the prompt early.
  */
 internal class TerminalInputConnection(
     view: View,
-    private val input: () -> TerminalInput?,
+    private val input: TerminalInput,
+    private val onInsertedText: (String) -> Unit,
 ) : BaseInputConnection(view, true) {
     private val composing = ComposingTextTracker()
 
@@ -41,26 +44,30 @@ internal class TerminalInputConnection(
             composing.finish()
             editable?.clear()
         }
-        repeat(beforeLength) { input()?.pressKey(TerminalKey.Backspace) }
+        repeat(beforeLength) { input.pressKey(TerminalKey.Backspace) }
         return true
     }
 
     override fun sendKeyEvent(event: KeyEvent): Boolean {
-        val terminalInput = input() ?: return false
-        KeyEventMapper.dispatch(event, terminalInput)
+        KeyEventMapper.dispatch(event, input)
         return true
     }
 
     override fun performEditorAction(actionCode: Int): Boolean {
-        input()?.pressKey(TerminalKey.Enter)
+        input.pressKey(TerminalKey.Enter)
         return true
     }
 
     private fun apply(edit: TextEdit) {
         if (edit.isEmpty) return
-        val terminalInput = input() ?: return
-        repeat(edit.deleteCount) { terminalInput.sendRaw(BACKSPACE) }
-        terminalInput.typeText(edit.insert)
+        repeat(edit.deleteCount) { input.sendRaw(BACKSPACE) }
+        if (isMultiLine(edit.insert)) onInsertedText(edit.insert) else input.typeText(edit.insert)
+    }
+
+    /** A lone line break is the keyboard's Enter key and must submit; only text spanning lines is pasted. */
+    private fun isMultiLine(text: String): Boolean {
+        val content = text.trim('\n', '\r')
+        return content.isNotEmpty() && text.any { it == '\n' || it == '\r' }
     }
 
     private companion object {

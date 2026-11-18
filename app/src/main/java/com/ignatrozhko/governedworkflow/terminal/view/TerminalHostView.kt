@@ -6,12 +6,9 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -38,8 +35,9 @@ interface TerminalHostEvents {
 }
 
 /**
- * xterm.js renders inside a WebView that never takes focus; this container owns focus and the IME
- * connection instead, so keyboards talk to a raw-key editor rather than xterm's hidden textarea.
+ * xterm.js renders inside a WebView that never takes focus. Focus and the IME connection belong to
+ * [TerminalInputField] beneath it, so keyboards talk to a raw-key editor rather than xterm's hidden textarea,
+ * while the system still sees an ordinary text field.
  */
 @SuppressLint("SetJavaScriptEnabled", "ViewConstructor")
 class TerminalHostView(
@@ -52,6 +50,7 @@ class TerminalHostView(
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val webView = WebView(context)
+    private val inputField = TerminalInputField(context, input, ::paste)
     private val assetLoader = WebViewAssetLoader.Builder()
         .addPathHandler(ASSETS_PATH, WebViewAssetLoader.AssetsPathHandler(context))
         .build()
@@ -65,17 +64,16 @@ class TerminalHostView(
     private val flushOutput = Runnable(::flushPendingOutput)
 
     init {
-        isFocusable = true
-        isFocusableInTouchMode = true
         setBackgroundColor(TERMINAL_BACKGROUND)
         configureWebView()
+        addView(inputField, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         webView.loadUrl(TERMINAL_PAGE_URL)
     }
 
     fun showKeyboard() {
-        requestFocus()
-        context.getSystemService(InputMethodManager::class.java).showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+        inputField.requestFocus()
+        context.getSystemService(InputMethodManager::class.java).showSoftInput(inputField, InputMethodManager.SHOW_IMPLICIT)
     }
 
     fun toggleKeyboard() {
@@ -87,6 +85,7 @@ class TerminalHostView(
         }
     }
 
+    /** xterm.js wraps the text in bracketed-paste markers when the program asked for them, and turns line breaks into CR. */
     fun paste(text: String) {
         webView.evaluateJavascript("gw.paste(${quote(text)})", null)
     }
@@ -103,7 +102,7 @@ class TerminalHostView(
 
     /** Rotation, keyboard hiding and taps on the surrounding Compose UI can drop focus; hardware keys need it back. */
     fun ensureFocus() {
-        if (!hasFocus()) requestFocus()
+        if (!inputField.hasFocus()) inputField.requestFocus()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -117,19 +116,6 @@ class TerminalHostView(
         removeCallbacks(flushOutput)
         webView.removeJavascriptInterface(BRIDGE_NAME)
         webView.destroy()
-    }
-
-    override fun onCheckIsTextEditor(): Boolean = true
-
-    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection {
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT or
-            InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD or
-            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN or
-            EditorInfo.IME_FLAG_NO_EXTRACT_UI or
-            EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
-            EditorInfo.IME_ACTION_NONE
-        return TerminalInputConnection(this) { input }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
