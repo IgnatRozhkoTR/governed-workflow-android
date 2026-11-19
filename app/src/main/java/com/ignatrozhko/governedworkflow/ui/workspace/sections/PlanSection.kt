@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,7 @@ import com.ignatrozhko.governedworkflow.data.api.PlanTask
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.commentsFor
 import com.ignatrozhko.governedworkflow.ui.common.ActionFooter
+import com.ignatrozhko.governedworkflow.ui.common.DECISION_BUTTON_MIN_WIDTH
 import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.Pill
 import com.ignatrozhko.governedworkflow.ui.common.PillTone
@@ -119,7 +121,7 @@ private fun PlanDecisionFooter(status: String?, isBusy: Boolean, onDecide: (Plan
         PrimaryButton(
             "Approve plan",
             { onDecide(PlanDecision.Approve) },
-            Modifier.weight(1.4f),
+            Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
             isEnabled = !isBusy && status != APPROVED,
             icon = rememberVectorPainter(Icons.Filled.Check),
         )

@@ -134,7 +134,8 @@ private fun SectionChips(state: WorkspaceState, onOpenSection: (WorkspaceSection
 /** Ticket, description and the workspace facts the app bar has no room for. */
 @Composable
 private fun DetailsCard(state: WorkspaceState, context: WorkspaceContext?, phaseNames: PhaseNames, loadError: String?) {
-    val ticket = listOfNotNull(context?.ticketId?.ifBlank { null }, context?.ticketName?.ifBlank { null }).joinToString(" · ")
+    val ticketId = context?.ticketId?.takeUnless { it.isBlank() || it == state.branch }
+    val ticket = listOfNotNull(ticketId, context?.ticketName?.ifBlank { null }).joinToString(" · ")
     var isDescriptionExpanded by rememberSaveable { mutableStateOf(false) }
     PanelCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -8,12 +8,19 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -105,8 +113,11 @@ private fun RowScope.ButtonLabel(text: String, icon: Painter?) {
         Icon(icon, contentDescription = null, Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
     }
-    Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+    Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
+
+/** Keeps the primary decision readable next to a long secondary label without stretching across a landscape footer. */
+val DECISION_BUTTON_MIN_WIDTH = 160.dp
 
 /**
  * Decision bar pinned between the content and the bottom navigation; [isAtScreenBottom] when no navigation sits below
@@ -114,8 +125,9 @@ private fun RowScope.ButtonLabel(text: String, icon: Painter?) {
  */
 @Composable
 fun ActionFooter(modifier: Modifier = Modifier, isAtScreenBottom: Boolean = false, content: @Composable RowScope.() -> Unit) {
+    val sides = if (isAtScreenBottom) WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom else WindowInsetsSides.Horizontal
     Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-        Column(if (isAtScreenBottom) Modifier.navigationBarsPadding() else Modifier) {
+        Column(Modifier.windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout).only(sides))) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),

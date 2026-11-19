@@ -125,7 +125,7 @@ fun WorkspaceScreen(
                 val title = screenTitle(tab, section, context, workspace, openFile)
                 PanelTopBar(
                     title = title,
-                    subtitle = screenSubtitle(title, workspace, openFile),
+                    subtitle = screenSubtitle(title, tab, workspace, openFile),
                     onBack = {
                         when {
                             tab == WorkspaceTab.Overview && section != null -> section = null
@@ -145,7 +145,13 @@ fun WorkspaceScreen(
         bottomBar = {
             Column {
                 if (pendingGate != null && isOverviewRoot && !isImeVisible) {
-                    GateDecisionFooter(pendingGate, isBusy, workspaceViewModel::approveGate, workspaceViewModel::rejectGate)
+                    GateDecisionFooter(
+                        pendingGate,
+                        isBusy,
+                        isAtScreenBottom = !isNavigationShown || isLandscape,
+                        onApprove = workspaceViewModel::approveGate,
+                        onReject = workspaceViewModel::rejectGate,
+                    )
                 }
                 if (isNavigationShown && !isLandscape) WorkspaceNavigationBar(tab, changedFileCount) { tab = it }
             }
@@ -185,12 +191,12 @@ private fun screenTitle(tab: WorkspaceTab, section: WorkspaceSection?, context: 
     tab == WorkspaceTab.Changes && openFile != null -> openFile.path.substringAfterLast('/')
     tab == WorkspaceTab.Changes -> WorkspaceTab.Changes.label
     tab == WorkspaceTab.Overview && section != null -> section.title
-    else -> context?.let { listOf(it.ticketId, it.ticketName).filter(String::isNotBlank).joinToString(" ") }
-        ?.takeIf(String::isNotBlank) ?: workspace.branch
+    else -> context?.let { listOf(it.ticketId.takeUnless { id -> id == workspace.branch }.orEmpty(), it.ticketName).filter(String::isNotBlank).joinToString(" ") }
+        ?.takeIf(String::isNotBlank) ?: tab.label
 }
 
-private fun screenSubtitle(title: String, workspace: WorkspaceRef, openFile: DiffFile?): String? {
-    if (openFile == null) return workspace.branch.takeUnless { it == title }
+private fun screenSubtitle(title: String, tab: WorkspaceTab, workspace: WorkspaceRef, openFile: DiffFile?): String? {
+    if (tab != WorkspaceTab.Changes || openFile == null) return workspace.branch.takeUnless { it == title }
     val directory = openFile.path.substringBeforeLast('/', missingDelimiterValue = "")
     return listOf(directory, "+${openFile.additions} −${openFile.deletions}").filter(String::isNotEmpty).joinToString(" · ")
 }

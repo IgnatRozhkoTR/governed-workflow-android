@@ -3,6 +3,7 @@ package com.ignatrozhko.governedworkflow.ui.overview
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.ignatrozhko.governedworkflow.data.api.PendingGate
 import com.ignatrozhko.governedworkflow.ui.common.ActionFooter
+import com.ignatrozhko.governedworkflow.ui.common.DECISION_BUTTON_MIN_WIDTH
 import com.ignatrozhko.governedworkflow.ui.common.LabeledField
 import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.PanelSheet
@@ -30,15 +32,21 @@ private enum class GateSheet { Approve, Reject }
  * asks for an optional commit message only at commit gates and is otherwise immediate.
  */
 @Composable
-fun GateDecisionFooter(gate: PendingGate, isBusy: Boolean, onApprove: (String) -> Unit, onReject: (String) -> Unit) {
+fun GateDecisionFooter(
+    gate: PendingGate,
+    isBusy: Boolean,
+    isAtScreenBottom: Boolean,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit,
+) {
     var sheet by remember(gate.phase) { mutableStateOf<GateSheet?>(null) }
-    ActionFooter {
+    ActionFooter(isAtScreenBottom = isAtScreenBottom) {
         OutlinedActionButton("Reject", { sheet = GateSheet.Reject }, isEnabled = !isBusy)
         Spacer(Modifier.weight(1f))
         PrimaryButton(
             "Approve",
             onClick = { if (gate.acceptsCommitMessage) sheet = GateSheet.Approve else onApprove("") },
-            modifier = Modifier.weight(1.4f),
+            modifier = Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
             isEnabled = !isBusy,
             icon = rememberVectorPainter(Icons.Filled.Check),
         )

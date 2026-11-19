@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -68,7 +72,7 @@ fun PanelTopBar(
         }
     }
     Row(
-        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.statusBars)
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout).only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .heightIn(min = TOP_BAR_HEIGHT).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -80,7 +84,7 @@ fun PanelTopBar(
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), maxLines = TITLE_MAX_LINES, overflow = TextOverflow.Ellipsis)
             if (subtitle != null && switchError == null) {
-                Text(subtitle, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = SUBTITLE_MAX_LINES, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 ConnectionSubtitle(connection, switchError)
             }
@@ -177,4 +181,3 @@ private const val SWITCH_ERROR_VISIBLE_MS = 5_000L
 
 private val TOP_BAR_HEIGHT = 64.dp
 private const val TITLE_MAX_LINES = 3
-private const val SUBTITLE_MAX_LINES = 3
