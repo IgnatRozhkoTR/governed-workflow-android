@@ -1,31 +1,41 @@
 package com.ignatrozhko.governedworkflow.ui.workspace.sections
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.CommentTargets
 import com.ignatrozhko.governedworkflow.data.api.NewComment
 import com.ignatrozhko.governedworkflow.data.api.PhaseOrder
 import com.ignatrozhko.governedworkflow.data.api.PhaseScope
+import com.ignatrozhko.governedworkflow.data.api.Plan
 import com.ignatrozhko.governedworkflow.data.api.PlanDecision
 import com.ignatrozhko.governedworkflow.data.api.PlanSubphase
 import com.ignatrozhko.governedworkflow.data.api.PlanTask
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.commentsFor
+import com.ignatrozhko.governedworkflow.ui.common.ActionFooter
+import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.Pill
 import com.ignatrozhko.governedworkflow.ui.common.PillTone
+import com.ignatrozhko.governedworkflow.ui.common.PrimaryButton
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
@@ -34,12 +44,10 @@ import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentThread
 import com.ignatrozhko.governedworkflow.ui.workspace.common.DiagramCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
 import com.ignatrozhko.governedworkflow.ui.workspace.common.countLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.openCommentsLabel
-import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
 import com.ignatrozhko.governedworkflow.ui.workspace.common.subtitleOf
 
 /** Read top-down like the web panel's plan tab: what the plan is, how the system looks, then the steps. */
@@ -51,8 +59,16 @@ fun PlanSection(state: WorkspaceState, viewModel: WorkspaceViewModel, isBusy: Bo
         return
     }
     val comments = PlanComments(state, viewModel)
+    Column(modifier) {
+        PlanList(plan, state, comments, Modifier.weight(1f))
+        PlanDecisionFooter(state.planStatus, isBusy, viewModel::decidePlan)
+    }
+}
+
+@Composable
+private fun PlanList(plan: Plan, state: WorkspaceState, comments: PlanComments, modifier: Modifier) {
     LazyColumn(modifier, contentPadding = SectionContentPadding, verticalArrangement = SectionSpacing) {
-        item(key = "header") { PlanHeader(state.planStatus, plan.description, isBusy, viewModel::decidePlan, comments) }
+        item(key = "header") { PlanHeader(plan.description, comments) }
         if (plan.diagrams.isNotEmpty()) item(key = "diagrams-label") { GroupLabel("System diagrams") }
         itemsIndexed(plan.diagrams, key = { index, _ -> "diagram:$index" }) { index, diagram ->
             DiagramCard(diagram.title.ifBlank { "Diagram ${index + 1}" }, diagram.diagram, "plan:diagram:$index")
@@ -85,26 +101,28 @@ private fun GroupLabel(text: String) {
 }
 
 @Composable
-private fun PlanHeader(
-    status: String?,
-    description: String,
-    isBusy: Boolean,
-    onDecide: (PlanDecision) -> Unit,
-    comments: PlanComments,
-) {
-    SectionCard {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Plan", style = MaterialTheme.typography.titleMedium)
-            status?.let { Pill(it, planStatusTone(it)) }
-        }
-        if (description.isNotBlank()) {
-            CollapsibleSection("Description", "plan:description", subtitle = previewLine(description)) { MarkdownText(description) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { onDecide(PlanDecision.Approve) }, enabled = !isBusy && status != APPROVED) { Text("Approve plan") }
-            OutlinedButton(onClick = { onDecide(PlanDecision.Reject) }, enabled = !isBusy && status != REJECTED) { Text("Reject") }
-        }
+private fun PlanHeader(description: String, comments: PlanComments) {
+    Column(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.large).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (description.isNotBlank()) MarkdownText(description)
         comments.Thread(CommentTargets.WHOLE_PLAN)
+    }
+}
+
+@Composable
+private fun PlanDecisionFooter(status: String?, isBusy: Boolean, onDecide: (PlanDecision) -> Unit) {
+    ActionFooter {
+        OutlinedActionButton("Request changes", { onDecide(PlanDecision.Reject) }, isEnabled = !isBusy && status != REJECTED)
+        Spacer(Modifier.weight(1f))
+        PrimaryButton(
+            "Approve plan",
+            { onDecide(PlanDecision.Approve) },
+            Modifier.weight(1.4f),
+            isEnabled = !isBusy && status != APPROVED,
+            icon = rememberVectorPainter(Icons.Filled.Check),
+        )
     }
 }
 
@@ -152,11 +170,11 @@ private fun SubphaseCard(subphase: PlanSubphase, scope: PhaseScope, currentPhase
 }
 
 @Composable
-private fun SubphaseBadge(isCurrent: Boolean, doneCount: Int, taskCount: Int) = when {
-    isCurrent -> Pill("current", PillTone.Info)
-    taskCount > 0 && doneCount == taskCount -> Pill("done", PillTone.Ok)
-    doneCount > 0 -> Pill("in progress", PillTone.Info)
-    else -> Pill("pending", PillTone.Line)
+private fun SubphaseBadge(isCurrent: Boolean, doneCount: Int, taskCount: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (isCurrent) Pill("current", PillTone.Info)
+        Text("$doneCount/$taskCount", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -180,7 +198,7 @@ private fun TaskSection(task: PlanTask, memoryKey: String, comments: PlanComment
         title = task.title,
         memoryKey = memoryKey,
         subtitle = subtitleOf(task.agent, comments.openLabel(target)),
-        badge = { if (task.status.isNotEmpty()) Pill(task.status, taskStatusTone(task.status)) },
+        badge = { if (task.status.isNotEmpty()) Pill(task.status.replace('_', ' '), taskStatusTone(task.status)) },
         titleStyle = MaterialTheme.typography.bodyMedium,
     ) {
         if (task.description.isNotEmpty()) MarkdownText(task.description)

@@ -4,14 +4,40 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("/res/font/jetbrains_mono_regular.ttf") format("truetype");
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("/res/font/jetbrains_mono_medium.ttf") format("truetype");
+      font-weight: 500 700;
+    }
     html, body { margin: 0; padding: 0; background: transparent; }
     #diagram { display: inline-block; padding: 4px; }
-    #diagram svg { display: block; max-width: none !important; height: auto; }
+    #diagram svg { display: block; max-width: none !important; height: auto; overflow: visible; }
+    .cluster-label span, .cluster-label .nodeLabel {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #tip {
+      position: fixed;
+      display: none;
+      max-width: 80vw;
+      padding: 6px 10px;
+      border-radius: 12px;
+      font: 12px "JetBrains Mono", monospace;
+      overflow-wrap: anywhere;
+    }
   </style>
   <script src="mermaid.min.js"></script>
 </head>
 <body>
   <div id="diagram"></div>
+  <div id="tip"></div>
   <script src="diagram.js"></script>
 </body>
 </html>

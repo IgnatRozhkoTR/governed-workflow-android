@@ -18,6 +18,27 @@ sealed interface DiagramRender {
     data class Failed(val message: String) : DiagramRender
 }
 
+/** Diagram colors taken from the active theme, so a diagram is drawn from the same tokens as the screen around it. */
+data class DiagramPalette(
+    val fill: Int,
+    val border: Int,
+    val text: Int,
+    val dim: Int,
+    val line: Int,
+    val accent: Int,
+    val accentSoft: Int,
+    val accentText: Int,
+) {
+    fun toJson(): String = listOf(
+        "fill" to fill, "border" to border, "text" to text, "dim" to dim, "line" to line,
+        "accent" to accent, "accentSoft" to accentSoft, "accentText" to accentText,
+    ).joinToString(",", "{", "}") { (name, color) -> "\"$name\":\"${"#%06X".format(color and RGB_MASK)}\"" }
+
+    private companion object {
+        const val RGB_MASK = 0xFFFFFF
+    }
+}
+
 enum class DiagramMode(val query: String, val isZoomable: Boolean) {
     Inline("inline", isZoomable = false),
     FullScreen("fullscreen", isZoomable = true),
@@ -31,11 +52,13 @@ enum class DiagramMode(val query: String, val isZoomable: Boolean) {
 class DiagramWebView(
     context: Context,
     private val source: String,
+    private val palette: DiagramPalette,
     mode: DiagramMode,
     private val onResult: (DiagramRender) -> Unit,
 ) : WebView(context) {
     private val assetLoader = WebViewAssetLoader.Builder()
         .addPathHandler(ASSETS_PATH, WebViewAssetLoader.AssetsPathHandler(context))
+        .addPathHandler(RESOURCES_PATH, WebViewAssetLoader.ResourcesPathHandler(context))
         .build()
 
     init {
@@ -58,6 +81,12 @@ class DiagramWebView(
         loadUrl("$PAGE_URL?mode=${mode.query}")
     }
 
+    /** Shows the full title of the lane under the given point, in view pixels; the tip hides itself. */
+    fun showLaneTitleAt(xPx: Float, yPx: Float) {
+        val density = resources.displayMetrics.density
+        evaluateJavascript("gwShowTitleAt(${xPx / density}, ${yPx / density})", null)
+    }
+
     private inner class BundledAssetsOnlyClient : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
             assetLoader.shouldInterceptRequest(request.url) ?: refused()
@@ -73,6 +102,9 @@ class DiagramWebView(
         fun source(): String = source
 
         @JavascriptInterface
+        fun palette(): String = palette.toJson()
+
+        @JavascriptInterface
         fun onRendered(width: Int, height: Int) {
             post { onResult(DiagramRender.Rendered(width, height)) }
         }
@@ -86,6 +118,7 @@ class DiagramWebView(
     private companion object {
         const val BRIDGE_NAME = "GwDiagram"
         const val ASSETS_PATH = "/assets/"
+        const val RESOURCES_PATH = "/res/"
         const val PAGE_URL = "https://${WebViewAssetLoader.DEFAULT_DOMAIN}/assets/mermaid/diagram.html"
         const val FULL_TEXT_ZOOM = 100
         const val FORBIDDEN = 403

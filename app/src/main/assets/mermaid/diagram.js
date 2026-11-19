@@ -1,53 +1,111 @@
 (function () {
   'use strict';
 
+  var MIN_LANE_WIDTH = 150;
+  var LANE_TITLE_PADDING = 24;
+  var VIEW_MARGIN = 12;
+  var TIP_VISIBLE_MS = 3500;
+
   var bridge = window.GwDiagram;
+  var palette = JSON.parse(bridge.palette());
   var isFullScreen = new URLSearchParams(location.search).get('mode') === 'fullscreen';
   var naturalWidth = { useMaxWidth: false };
+  var tipTimer = null;
 
-  // Same dark palette as the web panel, so a diagram looks identical in both clients.
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: 'strict',
     suppressErrorRendering: true,
-    theme: 'dark',
+    theme: 'base',
     themeVariables: {
       background: 'transparent',
-      fontFamily: 'sans-serif',
-      fontSize: '13px',
-      primaryColor: '#2d3250', primaryTextColor: '#f0ede8', primaryBorderColor: '#4a5078',
-      lineColor: '#8888a0', secondaryColor: '#252840', tertiaryColor: '#1e2035',
-      actorBkg: '#2d3250', actorBorder: '#4a5078', actorTextColor: '#f0ede8',
-      activationBkgColor: '#252840', activationBorderColor: '#4a5078',
-      signalColor: '#8888a0', signalTextColor: '#f0ede8',
-      labelBoxBkgColor: '#1e2035', labelBoxBorderColor: '#4a5078', labelTextColor: '#f0ede8',
-      loopTextColor: '#f0ede8',
-      noteBkgColor: '#3a3a2d', noteBorderColor: '#c7b76b', noteTextColor: '#f0ede8',
-      mainBkg: '#2d3250', nodeBorder: '#4a5078', clusterBkg: '#1e2035', clusterBorder: '#4a5078',
-      edgeLabelBackground: '#1e2035', classText: '#f0ede8'
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '12px',
+      primaryColor: palette.fill, primaryTextColor: palette.text, primaryBorderColor: palette.border,
+      secondaryColor: palette.fill, secondaryTextColor: palette.text, secondaryBorderColor: palette.border,
+      tertiaryColor: palette.fill, tertiaryTextColor: palette.text, tertiaryBorderColor: palette.border,
+      lineColor: palette.line, textColor: palette.text, mainBkg: palette.fill, nodeBorder: palette.border,
+      clusterBkg: 'transparent', clusterBorder: palette.border, titleColor: palette.dim,
+      edgeLabelBackground: palette.fill,
+      actorBkg: palette.fill, actorBorder: palette.border, actorTextColor: palette.text, actorLineColor: palette.line,
+      signalColor: palette.line, signalTextColor: palette.text,
+      labelBoxBkgColor: palette.fill, labelBoxBorderColor: palette.border, labelTextColor: palette.text,
+      loopTextColor: palette.text, noteBkgColor: palette.accentSoft, noteBorderColor: palette.accent,
+      noteTextColor: palette.accentText, classText: palette.text
     },
-    flowchart: { useMaxWidth: false, nodeSpacing: 25, rankSpacing: 45, padding: 10 },
+    themeCSS: '.cluster rect { stroke-dasharray: 4 3; rx: 12; ry: 12; } .cluster-label { fill: ' + palette.dim + '; color: ' + palette.dim + '; }',
+    flowchart: {
+      useMaxWidth: false, htmlLabels: true, nodeSpacing: 25, rankSpacing: 45, padding: 10,
+      subGraphTitleMargin: { top: 8, bottom: 24 }
+    },
     sequence: naturalWidth, class: naturalWidth, state: naturalWidth, er: naturalWidth,
     gantt: naturalWidth, journey: naturalWidth, pie: naturalWidth, mindmap: naturalWidth,
     timeline: naturalWidth, gitGraph: naturalWidth
   });
 
+  var tip = document.getElementById('tip');
+  tip.style.background = palette.accentSoft;
+  tip.style.color = palette.accentText;
+
   // Agents write "\n" inside labels to mean a line break, as the web panel renders it.
   var source = bridge.source().replace(/\\n/g, '<br/>');
 
-  mermaid.render('gwDiagram', source).then(function (result) {
+  var fontReady = document.fonts && document.fonts.load
+    ? document.fonts.load('12px "JetBrains Mono"').catch(function () {})
+    : Promise.resolve();
+
+  fontReady.then(function () {
+    return mermaid.render('gwDiagram', source);
+  }).then(function (result) {
     var host = document.getElementById('diagram');
     host.innerHTML = result.svg;
     var svg = host.querySelector('svg');
+    widenLanes(svg);
     pinToNaturalSize(svg);
     if (isFullScreen) fitToScreen(svg);
     var box = host.getBoundingClientRect();
-    var width = Math.ceil(box.width);
-    var height = Math.ceil(box.height);
-    bridge.onRendered(width, height);
+    bridge.onRendered(Math.ceil(box.width), Math.ceil(box.height));
   }).catch(function (error) {
     bridge.onFailed(String((error && error.message) || error));
   });
+
+  // Every lane gets room for a readable title row: lanes narrower than the minimum grow around their centre, and a
+  // long title is cut with an ellipsis; the full title shows on tap or long press.
+  function widenLanes(svg) {
+    svg.querySelectorAll('g.cluster').forEach(function (cluster) {
+      var rect = cluster.querySelector('rect');
+      var label = cluster.querySelector('.cluster-label');
+      if (!rect) return;
+      var width = rect.width.baseVal.value;
+      var grown = Math.max(width, MIN_LANE_WIDTH);
+      rect.setAttribute('x', rect.x.baseVal.value - (grown - width) / 2);
+      rect.setAttribute('width', grown);
+      if (label) limitTitle(label, grown);
+    });
+    fitViewBoxToContent(svg);
+  }
+
+  function limitTitle(label, laneWidth) {
+    var text = label.textContent.trim();
+    var box = label.querySelector('foreignObject');
+    var inner = label.querySelector('span, .nodeLabel');
+    if (!box || !inner) return;
+    var room = laneWidth - LANE_TITLE_PADDING;
+    var shift = (Number(box.getAttribute('width')) - room) / 2;
+    box.setAttribute('width', room);
+    box.setAttribute('x', Number(box.getAttribute('x') || 0) + shift);
+    inner.style.maxWidth = room + 'px';
+    label.setAttribute('data-title', text);
+  }
+
+  function fitViewBoxToContent(svg) {
+    var content = svg.getBBox();
+    var x = content.x - VIEW_MARGIN;
+    var y = content.y - VIEW_MARGIN;
+    var width = content.width + VIEW_MARGIN * 2;
+    var height = content.height + VIEW_MARGIN * 2;
+    svg.setAttribute('viewBox', [x, y, width, height].join(' '));
+  }
 
   // Mermaid sizes some diagrams as width="100%", which would stretch them with the view that is about to be resized
   // to fit them; fixing the size to the viewBox keeps one diagram unit equal to one CSS pixel.
@@ -70,4 +128,20 @@
     svg.setAttribute('height', Math.ceil(Number(svg.getAttribute('height')) * available / width));
     svg.setAttribute('width', available);
   }
+
+  function showTitleAt(x, y) {
+    var element = document.elementFromPoint(x, y);
+    var label = element && element.closest('.cluster-label');
+    if (!label) return;
+    var rect = label.getBoundingClientRect();
+    tip.textContent = label.getAttribute('data-title');
+    tip.style.display = 'block';
+    tip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - tip.offsetWidth - 4)) + 'px';
+    tip.style.top = Math.min(rect.bottom + 4, window.innerHeight - tip.offsetHeight - 4) + 'px';
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(function () { tip.style.display = 'none'; }, TIP_VISIBLE_MS);
+  }
+
+  window.gwShowTitleAt = showTitleAt;
+  document.addEventListener('click', function (event) { showTitleAt(event.clientX, event.clientY); });
 })();

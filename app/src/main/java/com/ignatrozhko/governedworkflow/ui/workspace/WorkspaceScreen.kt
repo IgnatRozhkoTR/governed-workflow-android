@@ -133,6 +133,11 @@ fun WorkspaceScreen(
                         }
                     },
                     onManageServers = onManageServers,
+                    actions = {
+                        val shownSection = section
+                        val sectionState = snapshot.state
+                        if (tab == WorkspaceTab.Overview && shownSection != null && sectionState != null) SectionStatusPill(shownSection, sectionState)
+                    },
                 )
             }
         },

@@ -32,13 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.ignatrozhko.governedworkflow.R
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import kotlin.math.roundToInt
 
 /**
@@ -50,21 +54,42 @@ private val finishedRenders = LruCache<String, DiagramRender>(RENDER_CACHE_SIZE)
 /** A titled diagram on its own card; diagrams are the one block that starts expanded, as users came to see them. */
 @Composable
 fun DiagramCard(title: String, source: String, memoryKey: String, modifier: Modifier = Modifier) {
-    CollapsibleCard(title, memoryKey, modifier, initiallyExpanded = true) { DiagramBody(title, source, memoryKey) }
+    var isFullScreen by rememberSaveable(source) { mutableStateOf(false) }
+    CollapsibleCard(
+        title,
+        memoryKey,
+        modifier,
+        initiallyExpanded = true,
+        badge = { FullScreenButton { isFullScreen = true } },
+    ) { DiagramBody(source, memoryKey) { isFullScreen = true } }
+    if (isFullScreen) FullScreenDiagram(title, source) { isFullScreen = false }
 }
 
 /** A diagram embedded in other content, such as a mermaid block inside markdown. */
 @Composable
 fun DiagramBlock(title: String, source: String, memoryKey: String, modifier: Modifier = Modifier) {
-    CollapsibleSection(title, memoryKey, modifier, initiallyExpanded = true, titleStyle = MaterialTheme.typography.labelLarge) {
-        DiagramBody(title, source, memoryKey)
-    }
+    var isFullScreen by rememberSaveable(source) { mutableStateOf(false) }
+    CollapsibleSection(
+        title,
+        memoryKey,
+        modifier,
+        initiallyExpanded = true,
+        titleStyle = MaterialTheme.typography.labelLarge,
+        badge = { FullScreenButton { isFullScreen = true } },
+    ) { DiagramBody(source, memoryKey) { isFullScreen = true } }
+    if (isFullScreen) FullScreenDiagram(title, source) { isFullScreen = false }
 }
 
 @Composable
-private fun DiagramBody(title: String, source: String, memoryKey: String) {
-    var render by remember(source) { mutableStateOf(finishedRenders.get(source) ?: DiagramRender.Rendering) }
-    var isFullScreen by rememberSaveable(source) { mutableStateOf(false) }
+private fun FullScreenButton(onClick: () -> Unit) {
+    IconButton(onClick) { Icon(painterResource(R.drawable.ic_fullscreen), contentDescription = "Open diagram full screen", Modifier.size(20.dp)) }
+}
+
+@Composable
+private fun DiagramBody(source: String, memoryKey: String, onOpen: () -> Unit) {
+    val palette = rememberDiagramPalette()
+    val renderKey = "$source|${Checkpoint.colors.isNight}"
+    var render by remember(renderKey) { mutableStateOf(finishedRenders.get(renderKey) ?: DiagramRender.Rendering) }
     val current = render
     if (current is DiagramRender.Failed) {
         DiagramError(current.message, source)
@@ -72,15 +97,30 @@ private fun DiagramBody(title: String, source: String, memoryKey: String) {
     }
     InlineDiagram(
         source = source,
+        palette = palette,
         render = current,
         onResult = { result ->
-            finishedRenders.put(source, result)
+            finishedRenders.put(renderKey, result)
             render = result
         },
-        onOpen = { isFullScreen = true },
+        onOpen = onOpen,
     )
     CollapsibleSection("Show source", "$memoryKey:source", titleStyle = MaterialTheme.typography.labelLarge) { MonospaceBlock(source) }
-    if (isFullScreen) FullScreenDiagram(title, source) { isFullScreen = false }
+}
+
+@Composable
+private fun rememberDiagramPalette(): DiagramPalette {
+    val scheme = MaterialTheme.colorScheme
+    return DiagramPalette(
+        fill = scheme.surfaceVariant.toArgb(),
+        border = scheme.outline.toArgb(),
+        text = scheme.onSurface.toArgb(),
+        dim = scheme.onSurfaceVariant.toArgb(),
+        line = scheme.onSurfaceVariant.toArgb(),
+        accent = scheme.primary.toArgb(),
+        accentSoft = scheme.primaryContainer.toArgb(),
+        accentText = scheme.onPrimaryContainer.toArgb(),
+    )
 }
 
 /**
@@ -89,10 +129,10 @@ private fun DiagramBody(title: String, source: String, memoryKey: String) {
  * diagram, vertical drags still scroll the list, and a tap opens the zoomable full-screen view.
  */
 @Composable
-private fun InlineDiagram(source: String, render: DiagramRender, onResult: (DiagramRender) -> Unit, onOpen: () -> Unit) {
+private fun InlineDiagram(source: String, palette: DiagramPalette, render: DiagramRender, onResult: (DiagramRender) -> Unit, onOpen: () -> Unit) {
     val currentOnResult by rememberUpdatedState(onResult)
     val context = LocalContext.current
-    val webView = remember(source) { DiagramWebView(context, source, DiagramMode.Inline) { currentOnResult(it) } }
+    val webView = remember(source, palette) { DiagramWebView(context, source, palette, DiagramMode.Inline) { currentOnResult(it) } }
     DisposableEffect(webView) { onDispose { webView.destroy() } }
     val rendered = render as? DiagramRender.Rendered
     BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -103,7 +143,7 @@ private fun InlineDiagram(source: String, render: DiagramRender, onResult: (Diag
                 if (rendered == null) CircularProgressIndicator(Modifier.align(Alignment.Center).size(PROGRESS_SIZE))
                 Spacer(Modifier.matchParentSize().diagramGestures(webView, onOpen))
             }
-            if (rendered != null && rendered.widthDp.dp > cardWidth) SecondaryText("Wide diagram: drag sideways to pan, tap to zoom")
+            if (rendered != null && rendered.widthDp.dp > cardWidth) SecondaryText("Swipe to pan. Tap or open full screen to zoom. Hold a lane title to read it in full.")
         }
     }
 }
@@ -116,7 +156,7 @@ private fun Modifier.diagramGestures(webView: DiagramWebView, onOpen: () -> Unit
             webView.scrollBy(-dragAmount.roundToInt(), 0)
         }
     }
-    .pointerInput(onOpen) { detectTapGestures { onOpen() } }
+    .pointerInput(onOpen) { detectTapGestures(onLongPress = { webView.showLaneTitleAt(it.x, it.y) }, onTap = { onOpen() }) }
 
 @Composable
 private fun DiagramError(message: String, source: String) {
@@ -126,7 +166,8 @@ private fun DiagramError(message: String, source: String) {
 
 @Composable
 private fun FullScreenDiagram(title: String, source: String, onClose: () -> Unit) {
-    var render by remember(source) { mutableStateOf<DiagramRender>(DiagramRender.Rendering) }
+    val palette = rememberDiagramPalette()
+    var render by remember(source, palette) { mutableStateOf<DiagramRender>(DiagramRender.Rendering) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column {
@@ -136,7 +177,7 @@ private fun FullScreenDiagram(title: String, source: String, onClose: () -> Unit
                 }
                 Box(Modifier.fillMaxSize()) {
                     AndroidView(
-                        factory = { context -> DiagramWebView(context, source, DiagramMode.FullScreen) { render = it } },
+                        factory = { context -> DiagramWebView(context, source, palette, DiagramMode.FullScreen) { render = it } },
                         modifier = Modifier.fillMaxSize(),
                         onRelease = { it.destroy() },
                     )
