@@ -144,11 +144,12 @@ fun WorkspaceScreen(
         },
         bottomBar = {
             Column {
-                if (pendingGate != null && isOverviewRoot && !isImeVisible) {
+                if (pendingGate != null && isOverviewRoot) {
                     GateDecisionFooter(
                         pendingGate,
                         isBusy,
                         isAtScreenBottom = !isNavigationShown || isLandscape,
+                        isBarShown = !isImeVisible,
                         onApprove = workspaceViewModel::approveGate,
                         onReject = workspaceViewModel::rejectGate,
                     )

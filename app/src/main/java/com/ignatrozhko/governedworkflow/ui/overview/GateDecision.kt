@@ -29,27 +29,31 @@ private enum class GateSheet { Approve, Reject }
 
 /**
  * Reject and Approve pinned above the tabs while a gate waits. Rejecting always asks what should change; approving
- * asks for an optional commit message only at commit gates and is otherwise immediate.
+ * asks for an optional commit message only at commit gates and is otherwise immediate. The bar hides behind the
+ * keyboard while its sheets stay open, since the sheet's own text field is what raises the keyboard.
  */
 @Composable
 fun GateDecisionFooter(
     gate: PendingGate,
     isBusy: Boolean,
     isAtScreenBottom: Boolean,
+    isBarShown: Boolean,
     onApprove: (String) -> Unit,
     onReject: (String) -> Unit,
 ) {
     var sheet by remember(gate.phase) { mutableStateOf<GateSheet?>(null) }
-    ActionFooter(isAtScreenBottom = isAtScreenBottom) {
-        OutlinedActionButton("Reject", { sheet = GateSheet.Reject }, isEnabled = !isBusy)
-        Spacer(Modifier.weight(1f))
-        PrimaryButton(
-            "Approve",
-            onClick = { if (gate.acceptsCommitMessage) sheet = GateSheet.Approve else onApprove("") },
-            modifier = Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
-            isEnabled = !isBusy,
-            icon = rememberVectorPainter(Icons.Filled.Check),
-        )
+    if (isBarShown) {
+        ActionFooter(isAtScreenBottom = isAtScreenBottom) {
+            OutlinedActionButton("Reject", { sheet = GateSheet.Reject }, isEnabled = !isBusy)
+            Spacer(Modifier.weight(1f))
+            PrimaryButton(
+                "Approve",
+                onClick = { if (gate.acceptsCommitMessage) sheet = GateSheet.Approve else onApprove("") },
+                modifier = Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
+                isEnabled = !isBusy,
+                icon = rememberVectorPainter(Icons.Filled.Check),
+            )
+        }
     }
     when (sheet) {
         GateSheet.Approve -> ApproveCommitSheet(gate, onDismiss = { sheet = null }) {
