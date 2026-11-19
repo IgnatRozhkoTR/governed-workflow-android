@@ -144,7 +144,7 @@ private fun TerminalGateStrip(phase: String, onOpen: () -> Unit) {
 private fun ExitFullScreenHandle(modifier: Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = modifier.padding(4.dp).size(32.dp),
+        modifier = modifier.padding(4.dp).size(44.dp),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
     ) {

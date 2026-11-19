@@ -73,7 +73,7 @@ fun CommentCard(comment: Comment, onResolve: (commentId: Long, isResolved: Boole
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             CommentBody(comment.author, comment.resolution?.replace('_', ' '), comment.text, isResolved = comment.resolved)
             comment.replies.forEach { reply -> CommentBody(reply.author, null, reply.text, isResolved = false) }
-            OutlinedActionButton(if (comment.resolved) "Reopen" else "Resolve", { onResolve(comment.id, !comment.resolved) }, height = 36.dp)
+            OutlinedActionButton(if (comment.resolved) "Reopen" else "Resolve", { onResolve(comment.id, !comment.resolved) })
         }
     }
 }

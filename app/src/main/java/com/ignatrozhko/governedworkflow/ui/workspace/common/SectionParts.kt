@@ -22,16 +22,6 @@ import com.mikepenz.markdown.m3.markdownTypography
 val SectionContentPadding = PaddingValues(16.dp)
 val SectionSpacing = Arrangement.spacedBy(12.dp)
 
-@Composable
-fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    PanelCard(modifier) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            content()
-        }
-    }
-}
-
 /** Markdown whose fenced mermaid blocks are drawn as diagrams instead of code. */
 @Composable
 fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {

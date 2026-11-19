@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.Comment
 import com.ignatrozhko.governedworkflow.data.api.CommentTargets
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
+import com.ignatrozhko.governedworkflow.ui.common.FieldLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
@@ -47,13 +48,14 @@ fun CommentsHubSection(
         return
     }
     LazyColumn(modifier, contentPadding = SectionContentPadding) {
-        open.groupBy { it.scope }.forEach { (scope, comments) ->
+        open.groupBy { it.scope }.toSortedMap(compareBy { CAPTION_ORDER.indexOf(it).takeIf { index -> index >= 0 } ?: CAPTION_ORDER.size }).forEach { (scope, comments) ->
             item(key = "scope:$scope") {
-                Text(scope.replaceFirstChar { it.uppercase() }, Modifier.padding(top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall)
+                FieldLabel(scope.replaceFirstChar { it.uppercase() }, Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp))
             }
             items(comments, key = { it.id }) { comment ->
                 CollapsibleCard(
                     title = previewLine(comment.text).ifBlank { "Comment" },
+                    titleStyle = MaterialTheme.typography.bodyLarge,
                     memoryKey = "comments:${comment.id}",
                     modifier = Modifier.padding(vertical = 4.dp),
                     subtitle = subtitleOf(locationLabel(comment), comment.author),
@@ -70,3 +72,5 @@ private fun locationLabel(comment: Comment): String {
     val line = comment.lineStart?.let { ":$it" }.orEmpty()
     return (comment.filePath ?: comment.target) + line
 }
+
+private val CAPTION_ORDER = listOf("phase", "plan", "research", "review")

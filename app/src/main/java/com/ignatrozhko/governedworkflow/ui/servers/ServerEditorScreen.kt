@@ -104,8 +104,8 @@ private fun ServerForm(state: ServerEditorUiState, viewModel: ServerEditorViewMo
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
     )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedActionButton("Paste URL", { viewModel.appendUrl(readClipboardText(context)) }, icon = painterResource(R.drawable.ic_paste), height = 36.dp)
-        OutlinedActionButton("Scan QR", { viewModel.setScanningQr(true) }, icon = painterResource(R.drawable.ic_qr), height = 36.dp)
+        OutlinedActionButton("Paste URL", { viewModel.appendUrl(readClipboardText(context)) }, icon = painterResource(R.drawable.ic_paste))
+        OutlinedActionButton("Scan QR", { viewModel.setScanningQr(true) }, icon = painterResource(R.drawable.ic_qr))
     }
     LabeledField(
         "Admin token",
@@ -118,7 +118,7 @@ private fun ServerForm(state: ServerEditorUiState, viewModel: ServerEditorViewMo
             TextButton(onClick = { isTokenVisible = !isTokenVisible }) { Text(if (isTokenVisible) "Hide" else "Show") }
         },
     )
-    OutlinedActionButton("Paste token", { viewModel.onTokenChange(readClipboardText(context)) }, icon = painterResource(R.drawable.ic_paste), height = 36.dp)
+    OutlinedActionButton("Paste token", { viewModel.onTokenChange(readClipboardText(context)) }, icon = painterResource(R.drawable.ic_paste))
 }
 
 @Composable

@@ -2,13 +2,15 @@ package com.ignatrozhko.governedworkflow.ui.workspace.sections
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.ignatrozhko.governedworkflow.connection.ConnectionManager
 import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.Proposal
@@ -17,8 +19,10 @@ import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.listProposals
 import com.ignatrozhko.governedworkflow.data.api.resolveProposal
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
+import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.Pill
 import com.ignatrozhko.governedworkflow.ui.common.PillTone
+import com.ignatrozhko.governedworkflow.ui.common.PrimaryButton
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
@@ -54,22 +58,33 @@ private fun ProposalCard(proposal: Proposal, isBusy: Boolean, onResolve: (Long, 
     CollapsibleCard(
         title = proposal.title,
         memoryKey = "proposal:${proposal.id}",
-        subtitle = subtitleOf(proposal.type, proposal.origin),
-        badge = { Pill(proposal.status, proposalStatusTone(proposal.status)) },
+        subtitle = subtitleOf(proposal.type.replace('_', ' ').replaceFirstChar { it.uppercase() }, proposal.origin),
+        titleStyle = MaterialTheme.typography.bodyLarge,
+        badge = { Pill(proposalStatusLabel(proposal.status), proposalStatusTone(proposal.status)) },
     ) {
         MarkdownText(proposal.body)
         if (proposal.reason.isNotBlank()) SecondaryText("Why: ${proposal.reason}")
         if (proposal.isOpen) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { onResolve(proposal.id, ProposalDecision.MarkApplied) }, enabled = !isBusy) { Text("Mark applied") }
-                OutlinedButton(onClick = { onResolve(proposal.id, ProposalDecision.Reject) }, enabled = !isBusy) { Text("Reject") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                OutlinedActionButton("Reject", { onResolve(proposal.id, ProposalDecision.Reject) }, isEnabled = !isBusy)
+                PrimaryButton(
+                    "Mark applied",
+                    { onResolve(proposal.id, ProposalDecision.MarkApplied) },
+                    isEnabled = !isBusy,
+                    icon = rememberVectorPainter(Icons.Filled.Check),
+                )
             }
         }
     }
 }
 
+private fun proposalStatusLabel(status: String) = when (status) {
+    "executed" -> "applied"
+    else -> status
+}
+
 private fun proposalStatusTone(status: String) = when (status) {
     "executed" -> PillTone.Ok
-    "rejected" -> PillTone.Bad
-    else -> PillTone.Warn
+    "rejected", "failed" -> PillTone.Bad
+    else -> PillTone.Info
 }

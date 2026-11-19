@@ -1,13 +1,20 @@
 package com.ignatrozhko.governedworkflow.ui.workspace.sections
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.connection.ConnectionManager
 import com.ignatrozhko.governedworkflow.data.api.Criterion
@@ -16,12 +23,15 @@ import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.listCriteria
 import com.ignatrozhko.governedworkflow.data.api.validateCriterion
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
+import com.ignatrozhko.governedworkflow.ui.common.FieldLabel
+import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.Pill
 import com.ignatrozhko.governedworkflow.ui.common.PillTone
+import com.ignatrozhko.governedworkflow.ui.common.PrimaryButton
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
@@ -52,18 +62,39 @@ private fun CriterionCard(criterion: Criterion, isBusy: Boolean, onValidate: (Lo
     CollapsibleCard(
         title = previewLine(criterion.description).ifBlank { "Criterion ${criterion.id}" },
         memoryKey = "criterion:${criterion.id}",
-        subtitle = criterion.type.replace('_', ' '),
+        subtitle = criterion.type.replace('_', ' ').replaceFirstChar { it.uppercase() },
+        titleStyle = MaterialTheme.typography.bodyLarge,
         badge = { ValidationPill(criterion.validated) },
     ) {
         MarkdownText(criterion.description)
-        criterion.validationMessage?.takeIf { it.isNotBlank() }?.let { SecondaryText(it) }
-        criterion.details?.forEach { (key, value) -> SecondaryText("${key.replace('_', ' ')}: ${value.toString().trim('"')}") }
-        if (criterion.type == CUSTOM_TYPE) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { onValidate(criterion.id, true) }, enabled = !isBusy && criterion.validated != PASSED) { Text("Accept") }
-                OutlinedButton(onClick = { onValidate(criterion.id, false) }, enabled = !isBusy && criterion.validated != FAILED) { Text("Reject") }
-            }
-        }
+        criterion.validationMessage?.takeIf { it.isNotBlank() }?.let { ValidationMessage(it) }
+        criterion.details?.forEach { (key, value) -> CriterionDetail(key.replace('_', ' ').replaceFirstChar { it.uppercase() }, value.toString().trim('"')) }
+        if (criterion.type == CUSTOM_TYPE) CustomCriterionActions(criterion, isBusy, onValidate)
+    }
+}
+
+@Composable
+private fun ValidationMessage(message: String) {
+    Text(
+        message,
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium).padding(12.dp),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+}
+
+@Composable
+private fun CriterionDetail(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FieldLabel(label)
+        Text(value, style = MonoText.small)
+    }
+}
+
+@Composable
+private fun CustomCriterionActions(criterion: Criterion, isBusy: Boolean, onValidate: (Long, Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        OutlinedActionButton("Reject", { onValidate(criterion.id, false) }, isEnabled = !isBusy && criterion.validated != FAILED)
+        PrimaryButton("Accept", { onValidate(criterion.id, true) }, isEnabled = !isBusy && criterion.validated != PASSED, icon = rememberVectorPainter(Icons.Filled.Check))
     }
 }
 

@@ -1,10 +1,16 @@
 package com.ignatrozhko.governedworkflow.ui.common
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -14,14 +20,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +51,6 @@ import kotlinx.coroutines.launch
  * App bar with the screen title over a mono subtitle. Without a [subtitle] it shows which panel URL is in use; the
  * overflow menu lets the user pin another candidate URL, re-probe or manage servers.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PanelTopBar(
     title: String,
@@ -65,28 +67,27 @@ fun PanelTopBar(
             switchError = null
         }
     }
-    TopAppBar(
-        title = {
-            Column {
-                Text(title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (subtitle != null && switchError == null) {
-                    Text(subtitle, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                } else {
-                    ConnectionSubtitle(connection, switchError)
-                }
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.statusBars)
+            .heightIn(min = TOP_BAR_HEIGHT).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        } else {
+            Spacer(Modifier.width(12.dp))
+        }
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), maxLines = TITLE_MAX_LINES, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null && switchError == null) {
+                Text(subtitle, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = SUBTITLE_MAX_LINES, overflow = TextOverflow.Ellipsis)
+            } else {
+                ConnectionSubtitle(connection, switchError)
             }
-        },
-        navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
-            }
-        },
-        actions = {
-            actions()
-            ConnectionMenu(connection, onManageServers) { switchError = it }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-    )
+        }
+        actions()
+        ConnectionMenu(connection, onManageServers) { switchError = it }
+    }
 }
 
 @Composable
@@ -173,3 +174,7 @@ fun ConnectionState.serverOrNull() = when (this) {
 }
 
 private const val SWITCH_ERROR_VISIBLE_MS = 5_000L
+
+private val TOP_BAR_HEIGHT = 64.dp
+private const val TITLE_MAX_LINES = 3
+private const val SUBTITLE_MAX_LINES = 3

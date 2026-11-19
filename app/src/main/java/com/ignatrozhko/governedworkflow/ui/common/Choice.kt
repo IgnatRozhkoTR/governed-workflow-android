@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -74,6 +75,7 @@ fun ChoiceChip(
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier
+            .minimumInteractiveComponentSize()
             .heightIn(min = CHIP_HEIGHT)
             .border(1.dp, if (isSelected) scheme.onSurface else scheme.outline, CircleShape)
             .background(if (isSelected) scheme.onSurface else scheme.surface, CircleShape)
@@ -110,5 +112,5 @@ fun ToggleSwitch(isChecked: Boolean, onChange: (Boolean) -> Unit, modifier: Modi
     )
 }
 
-private val SEGMENT_HEIGHT = 30.dp
+private val SEGMENT_HEIGHT = 44.dp
 private val CHIP_HEIGHT = 36.dp

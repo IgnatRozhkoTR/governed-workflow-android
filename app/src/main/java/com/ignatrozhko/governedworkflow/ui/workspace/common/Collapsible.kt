@@ -98,6 +98,7 @@ fun CollapsibleCard(
     subtitle: String? = null,
     badge: (@Composable () -> Unit)? = null,
     initiallyExpanded: Boolean = false,
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     PanelCard(modifier) {
@@ -107,6 +108,7 @@ fun CollapsibleCard(
             subtitle = subtitle,
             badge = badge,
             initiallyExpanded = initiallyExpanded,
+            titleStyle = titleStyle,
             horizontalPadding = CARD_PADDING,
             hasDivider = true,
             content = content,
@@ -153,4 +155,4 @@ private fun CollapsibleHeader(
 private val CARD_PADDING = 16.dp
 private val MIN_HEADER_HEIGHT = 52.dp
 private const val EXPANDED_ROTATION = 90f
-private const val COLLAPSED_TITLE_LINES = 2
+private const val COLLAPSED_TITLE_LINES = 4

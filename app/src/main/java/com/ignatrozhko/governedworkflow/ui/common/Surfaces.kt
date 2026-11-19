@@ -80,12 +80,11 @@ fun OutlinedActionButton(
     modifier: Modifier = Modifier,
     isEnabled: Boolean = true,
     icon: Painter? = null,
-    height: Dp = BUTTON_HEIGHT,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     OutlinedButton(
         onClick,
-        modifier.heightIn(min = height),
+        modifier.heightIn(min = BUTTON_HEIGHT),
         enabled = isEnabled,
         shape = CircleShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),

@@ -2,17 +2,18 @@ package com.ignatrozhko.governedworkflow.ui.workspace.sections
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,10 +42,13 @@ import com.ignatrozhko.governedworkflow.data.api.setReviewMode
 import com.ignatrozhko.governedworkflow.data.api.setWorkflowMode
 import com.ignatrozhko.governedworkflow.data.api.updateProjectSettings
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
+import com.ignatrozhko.governedworkflow.ui.common.ChoiceChip
+import com.ignatrozhko.governedworkflow.ui.common.FieldLabel
+import com.ignatrozhko.governedworkflow.ui.common.LabeledField
+import com.ignatrozhko.governedworkflow.ui.common.PanelCard
 import com.ignatrozhko.governedworkflow.ui.common.ToggleSwitch
 import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 
 data class SettingsData(
@@ -91,23 +95,34 @@ class SettingsViewModel(workspace: WorkspaceRef, connectionManager: ConnectionMa
 fun SettingsSection(state: WorkspaceState, data: SettingsData, viewModel: SettingsViewModel, isBusy: Boolean, modifier: Modifier = Modifier) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        SectionCard(title = "This workspace") {
-            SwitchRow("Fast mode", "Skips research and planning gates", state.workflowMode == FAST_WORKFLOW_MODE, isBusy, viewModel::setWorkflowMode)
+        SettingsGroup("This workspace") {
+            SwitchRow("Fast mode", "Skips optional review gates", state.workflowMode == FAST_WORKFLOW_MODE, isBusy, viewModel::setWorkflowMode)
+            SettingsDivider()
             SwitchRow("YOLO mode", "Auto-approve user gates", state.yoloMode, isBusy, viewModel::setYolo)
-            Text("Review mode", style = MaterialTheme.typography.labelLarge)
-            ReviewModeChips(state.reviewMode, isBusy, viewModel::setReviewMode)
+            SettingsDivider()
+            ReviewModeRow("Review mode", state.reviewMode, isBusy, viewModel::setReviewMode)
+            SettingsDivider()
             ClaudeCommandField(data.claudeCommand, isBusy, viewModel::setClaudeCommand)
         }
-        ProjectDefaultsCard(data.project, isBusy, viewModel::updateProjectDefaults)
-        ModulesCard(data.modules, data.enabledModules, isBusy, viewModel::setEnabledModules)
+        ProjectDefaultsGroup(data.project, isBusy, viewModel::updateProjectDefaults)
+        ModulesGroup(data.modules, data.enabledModules, isBusy, viewModel::setEnabledModules)
     }
 }
 
 @Composable
+private fun SettingsGroup(caption: String, content: @Composable ColumnScope.() -> Unit) {
+    FieldLabel(caption, Modifier.padding(start = 4.dp, top = 6.dp))
+    PanelCard(content = content)
+}
+
+@Composable
+private fun SettingsDivider() = HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+@Composable
 private fun SwitchRow(title: String, subtitle: String, isChecked: Boolean, isBusy: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             SecondaryText(subtitle)
@@ -118,10 +133,13 @@ private fun SwitchRow(title: String, subtitle: String, isChecked: Boolean, isBus
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReviewModeChips(current: String, isBusy: Boolean, onSelect: (ReviewMode) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ReviewMode.entries.forEach { mode ->
-            FilterChip(selected = mode.wireValue == current, onClick = { onSelect(mode) }, enabled = !isBusy, label = { Text(mode.label) })
+private fun ReviewModeRow(title: String, current: String, isBusy: Boolean, onSelect: (ReviewMode) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReviewMode.entries.forEach { mode ->
+                ChoiceChip(mode.label, isSelected = mode.wireValue == current, onClick = { if (!isBusy) onSelect(mode) })
+            }
         }
     }
 }
@@ -129,37 +147,36 @@ private fun ReviewModeChips(current: String, isBusy: Boolean, onSelect: (ReviewM
 @Composable
 private fun ClaudeCommandField(saved: String, isBusy: Boolean, onSave: (String) -> Unit) {
     var command by remember(saved) { mutableStateOf(saved) }
-    OutlinedTextField(
-        value = command,
-        onValueChange = { command = it },
-        label = { Text("Claude launch command") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    TextButton(onClick = { onSave(command.trim()) }, enabled = !isBusy && command.trim() != saved && command.isNotBlank()) { Text("Save command") }
+    val isChanged = command.isNotBlank() && command.trim() != saved
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LabeledField("Claude launch command", command, { command = it }, isMono = true)
+        if (isChanged) TextButton(onClick = { onSave(command.trim()) }, enabled = !isBusy) { Text("Save command") }
+    }
 }
 
 @Composable
-private fun ProjectDefaultsCard(settings: ProjectSettings, isBusy: Boolean, onSave: (ProjectSettings) -> Unit) {
-    SectionCard(title = "Project defaults for new workspaces") {
+private fun ProjectDefaultsGroup(settings: ProjectSettings, isBusy: Boolean, onSave: (ProjectSettings) -> Unit) {
+    SettingsGroup("Project defaults for new workspaces") {
         SwitchRow("YOLO by default", "New workspaces start in YOLO mode", settings.yoloModeDefault, isBusy) {
             onSave(settings.copy(yoloModeDefault = it))
         }
+        SettingsDivider()
         SwitchRow("Fast by default", "New workspaces start in fast mode", settings.fastModeDefault, isBusy) {
             onSave(settings.copy(fastModeDefault = it))
         }
-        Text("Default review mode", style = MaterialTheme.typography.labelLarge)
-        ReviewModeChips(settings.reviewModeDefault, isBusy) { onSave(settings.copy(reviewModeDefault = it.wireValue)) }
+        SettingsDivider()
+        ReviewModeRow("Default review mode", settings.reviewModeDefault, isBusy) { onSave(settings.copy(reviewModeDefault = it.wireValue)) }
     }
 }
 
 /** Modules are a panel-wide setting; saving re-renders every project's Claude config, hence the confirmation. */
 @Composable
-private fun ModulesCard(modules: List<ModuleInfo>, enabled: Set<String>, isBusy: Boolean, onSave: (Set<String>) -> Unit) {
+private fun ModulesGroup(modules: List<ModuleInfo>, enabled: Set<String>, isBusy: Boolean, onSave: (Set<String>) -> Unit) {
     var pending by remember { mutableStateOf<Set<String>?>(null) }
-    SectionCard(title = "Modules (all projects)") {
-        if (modules.isEmpty()) SecondaryText("No modules installed on this panel.")
-        modules.forEach { module ->
+    SettingsGroup("Modules (all projects)") {
+        if (modules.isEmpty()) SecondaryText("No modules installed on this panel.", Modifier.padding(16.dp))
+        modules.forEachIndexed { index, module ->
+            if (index > 0) SettingsDivider()
             SwitchRow(module.name, module.description, module.id in enabled, isBusy) { isOn ->
                 pending = if (isOn) enabled + module.id else enabled - module.id
             }
