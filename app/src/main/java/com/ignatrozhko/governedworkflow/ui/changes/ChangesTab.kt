@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -33,8 +34,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +49,7 @@ import com.ignatrozhko.governedworkflow.data.api.DiffFile
 import com.ignatrozhko.governedworkflow.data.api.DiffSource
 import com.ignatrozhko.governedworkflow.data.api.ReviewResolution
 import com.ignatrozhko.governedworkflow.data.api.reviewComments
+import com.ignatrozhko.governedworkflow.ui.common.ActionFooter
 import com.ignatrozhko.governedworkflow.ui.common.EmptyState
 import com.ignatrozhko.governedworkflow.ui.common.ListRowLayout
 import com.ignatrozhko.governedworkflow.ui.common.LoadState
@@ -76,7 +80,11 @@ fun ChangesTab(viewModel: ChangesViewModel, onManageServers: () -> Unit, modifie
             EmptySection("$path has no changes in this view.")
             return
         }
-        FileDiffView(openFile, reviewComments.forFile(path), isHidingResolved, viewModel, { isHidingResolved = it }, modifier)
+        val allFiles = (files as? LoadState.Loaded)?.data.orEmpty()
+        Column(modifier) {
+            FileDiffView(openFile, reviewComments.forFile(path), isHidingResolved, viewModel, { isHidingResolved = it }, Modifier.weight(1f))
+            FileNavigator(allFiles.indexOf(openFile), allFiles.size) { viewModel.openFile(allFiles[it].path) }
+        }
         return
     }
     LoadStateContent(repos, isRefreshing = false, onRefresh = viewModel::reload, onManageServers = onManageServers, modifier = modifier) { repoList ->
@@ -99,6 +107,20 @@ fun ChangesTab(viewModel: ChangesViewModel, onManageServers: () -> Unit, modifie
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FileNavigator(index: Int, count: Int, onOpen: (Int) -> Unit) {
+    ActionFooter {
+        OutlinedActionButton(
+            "Previous",
+            { onOpen(index - 1) },
+            isEnabled = index > 0,
+            icon = rememberVectorPainter(Icons.AutoMirrored.Filled.KeyboardArrowLeft),
+        )
+        Text("File ${index + 1} of $count", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        OutlinedActionButton("Next file", { onOpen(index + 1) }, isEnabled = index < count - 1)
     }
 }
 

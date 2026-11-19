@@ -62,6 +62,7 @@ fun AppNavHost(container: AppContainer) {
                 onPanelChosen = { url ->
                     navController.navigate(ServerEditorRoute(prefillUrl = url)) { popUpTo<LanScanRoute> { inclusive = true } }
                 },
+                onEnterManually = { navController.navigate(ServerEditorRoute()) { popUpTo<LanScanRoute> { inclusive = true } } },
                 onBack = navController::popBackStack,
             )
         }

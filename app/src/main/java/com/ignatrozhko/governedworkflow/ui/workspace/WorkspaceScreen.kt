@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,12 +42,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ignatrozhko.governedworkflow.data.api.DiffFile
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceContext
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.ui.changes.ChangesTab
 import com.ignatrozhko.governedworkflow.ui.changes.ChangesViewModel
+import com.ignatrozhko.governedworkflow.ui.common.CountBadge
 import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
 import com.ignatrozhko.governedworkflow.ui.common.GateBar
+import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.common.PanelTopBar
 import com.ignatrozhko.governedworkflow.ui.overview.GateDecisionFooter
@@ -78,6 +82,9 @@ fun WorkspaceScreen(
     var section by rememberSaveable { mutableStateOf(initialSection) }
     var isTerminalFullScreen by rememberSaveable { mutableStateOf(false) }
     val openPath by changesViewModel.openPath.collectAsStateWithLifecycle()
+    val changedFiles by changesViewModel.files.collectAsStateWithLifecycle()
+    val changedFileCount = (changedFiles as? LoadState.Loaded)?.data?.size ?: 0
+    val openFile = (changedFiles as? LoadState.Loaded)?.data?.firstOrNull { it.path == openPath }
     val isArchived by workspaceViewModel.isArchived.collectAsStateWithLifecycle()
     val snapshot by workspaceViewModel.snapshot.collectAsStateWithLifecycle()
     val context by workspaceViewModel.context.collectAsStateWithLifecycle()
@@ -114,10 +121,10 @@ fun WorkspaceScreen(
     Scaffold(
         topBar = {
             if (!isTerminal) {
-                val title = screenTitle(tab, section, context, workspace)
+                val title = screenTitle(tab, section, context, workspace, openFile)
                 PanelTopBar(
                     title = title,
-                    subtitle = workspace.branch.takeUnless { it == title },
+                    subtitle = screenSubtitle(title, workspace, openFile),
                     onBack = {
                         when {
                             tab == WorkspaceTab.Overview && section != null -> section = null
@@ -134,13 +141,13 @@ fun WorkspaceScreen(
                 if (pendingGate != null && isOverviewRoot && !isImeVisible) {
                     GateDecisionFooter(pendingGate, isBusy, workspaceViewModel::approveGate, workspaceViewModel::rejectGate)
                 }
-                if (isNavigationShown && !isLandscape) WorkspaceNavigationBar(tab) { tab = it }
+                if (isNavigationShown && !isLandscape) WorkspaceNavigationBar(tab, changedFileCount) { tab = it }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Row(Modifier.padding(padding).consumeWindowInsets(padding)) {
-            if (isNavigationShown && isLandscape) WorkspaceNavigationRail(tab) { tab = it }
+            if (isNavigationShown && isLandscape) WorkspaceNavigationRail(tab, changedFileCount) { tab = it }
             Column(Modifier.weight(1f).imePadding()) {
                 if (pendingGate != null && !isTerminal && !isOverviewRoot) {
                     GateBar("Gate ${pendingGate.phase} needs you", "Decide", openDecision, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
@@ -168,11 +175,18 @@ fun WorkspaceScreen(
     }
 }
 
-private fun screenTitle(tab: WorkspaceTab, section: WorkspaceSection?, context: WorkspaceContext?, workspace: WorkspaceRef): String = when {
+private fun screenTitle(tab: WorkspaceTab, section: WorkspaceSection?, context: WorkspaceContext?, workspace: WorkspaceRef, openFile: DiffFile?): String = when {
+    tab == WorkspaceTab.Changes && openFile != null -> openFile.path.substringAfterLast('/')
     tab == WorkspaceTab.Changes -> WorkspaceTab.Changes.label
     tab == WorkspaceTab.Overview && section != null -> section.title
     else -> context?.let { listOf(it.ticketId, it.ticketName).filter(String::isNotBlank).joinToString(" ") }
         ?.takeIf(String::isNotBlank) ?: workspace.branch
+}
+
+private fun screenSubtitle(title: String, workspace: WorkspaceRef, openFile: DiffFile?): String? {
+    if (openFile == null) return workspace.branch.takeUnless { it == title }
+    val directory = openFile.path.substringBeforeLast('/', missingDelimiterValue = "")
+    return listOf(directory, "+${openFile.additions} −${openFile.deletions}").filter(String::isNotEmpty).joinToString(" · ")
 }
 
 @Composable
@@ -204,13 +218,13 @@ private fun ShowMessages(messages: Flow<String>, snackbarHostState: SnackbarHost
 
 /** Landscape leaves too few terminal rows for a bottom bar, so tabs move to a side rail; with the keyboard up the chrome is dropped entirely. */
 @Composable
-private fun WorkspaceNavigationRail(selected: WorkspaceTab, onSelect: (WorkspaceTab) -> Unit) {
+private fun WorkspaceNavigationRail(selected: WorkspaceTab, changedFileCount: Int, onSelect: (WorkspaceTab) -> Unit) {
     NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
         WorkspaceTab.entries.forEach { tab ->
             NavigationRailItem(
                 selected = tab == selected,
                 onClick = { onSelect(tab) },
-                icon = { Icon(painterResource(tab.iconRes), contentDescription = null) },
+                icon = { TabIcon(tab, changedFileCount) },
                 label = { Text(tab.label, style = NAV_LABEL_STYLE) },
                 colors = NavigationRailItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -225,7 +239,7 @@ private fun WorkspaceNavigationRail(selected: WorkspaceTab, onSelect: (Workspace
 }
 
 @Composable
-private fun WorkspaceNavigationBar(selected: WorkspaceTab, onSelect: (WorkspaceTab) -> Unit) {
+private fun WorkspaceNavigationBar(selected: WorkspaceTab, changedFileCount: Int, onSelect: (WorkspaceTab) -> Unit) {
     Column {
         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
@@ -233,7 +247,7 @@ private fun WorkspaceNavigationBar(selected: WorkspaceTab, onSelect: (WorkspaceT
                 NavigationBarItem(
                     selected = tab == selected,
                     onClick = { onSelect(tab) },
-                    icon = { Icon(painterResource(tab.iconRes), contentDescription = null) },
+                    icon = { TabIcon(tab, changedFileCount) },
                     label = { Text(tab.label, style = NAV_LABEL_STYLE) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -246,6 +260,16 @@ private fun WorkspaceNavigationBar(selected: WorkspaceTab, onSelect: (WorkspaceT
             }
         }
     }
+}
+
+@Composable
+private fun TabIcon(tab: WorkspaceTab, changedFileCount: Int) {
+    val icon = @Composable { Icon(painterResource(tab.iconRes), contentDescription = null) }
+    if (tab != WorkspaceTab.Changes || changedFileCount == 0) {
+        icon()
+        return
+    }
+    BadgedBox(badge = { CountBadge(changedFileCount) }, content = { icon() })
 }
 
 private val NAV_LABEL_STYLE = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium)

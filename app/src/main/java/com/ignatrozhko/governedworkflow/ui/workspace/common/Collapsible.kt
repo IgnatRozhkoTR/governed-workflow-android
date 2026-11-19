@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -66,6 +67,7 @@ fun CollapsibleSection(
     initiallyExpanded: Boolean = false,
     titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
     horizontalPadding: Dp = 0.dp,
+    hasDivider: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val memory = LocalExpansionMemory.current
@@ -75,11 +77,14 @@ fun CollapsibleSection(
             memory.setExpanded(memoryKey, !isExpanded)
         }
         AnimatedVisibility(isExpanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-            Column(
-                Modifier.fillMaxWidth().padding(start = horizontalPadding, end = horizontalPadding, bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                content = content,
-            )
+            Column {
+                if (hasDivider) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                Column(
+                    Modifier.fillMaxWidth().padding(start = horizontalPadding, end = horizontalPadding, top = if (hasDivider) 12.dp else 0.dp, bottom = if (hasDivider) 14.dp else 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    content = content,
+                )
+            }
         }
     }
 }
@@ -103,6 +108,7 @@ fun CollapsibleCard(
             badge = badge,
             initiallyExpanded = initiallyExpanded,
             horizontalPadding = CARD_PADDING,
+            hasDivider = true,
             content = content,
         )
     }

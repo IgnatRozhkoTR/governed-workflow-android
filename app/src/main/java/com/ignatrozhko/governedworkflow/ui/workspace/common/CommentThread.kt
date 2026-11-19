@@ -1,6 +1,10 @@
 package com.ignatrozhko.governedworkflow.ui.workspace.common
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.Comment
+import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 
 /** Collapsed "N comments" link that expands into the thread with resolve toggles and an add-comment action. */
 @Composable
@@ -62,22 +68,56 @@ fun CommentCard(comment: Comment, onResolve: (commentId: Long, isResolved: Boole
     Surface(
         Modifier.fillMaxWidth().padding(vertical = 4.dp).let { if (onOpen != null) it.clickable(onClick = onOpen) else it },
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.medium,
     ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SecondaryText(listOfNotNull(comment.author, comment.resolution?.replace('_', ' ')).joinToString(" · "))
-            Text(
-                comment.text,
-                style = MaterialTheme.typography.bodyMedium,
-                textDecoration = if (comment.resolved) TextDecoration.LineThrough else null,
-            )
-            comment.replies.forEach { reply -> SecondaryText("↳ ${reply.author}: ${reply.text}") }
-            TextButton(onClick = { onResolve(comment.id, !comment.resolved) }) {
-                Text(if (comment.resolved) "Reopen" else "Resolve")
-            }
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CommentBody(comment.author, comment.resolution?.replace('_', ' '), comment.text, isResolved = comment.resolved)
+            comment.replies.forEach { reply -> CommentBody(reply.author, null, reply.text, isResolved = false) }
+            OutlinedActionButton(if (comment.resolved) "Reopen" else "Resolve", { onResolve(comment.id, !comment.resolved) }, height = 36.dp)
         }
     }
 }
+
+@Composable
+private fun CommentBody(author: String, detail: String?, text: String, isResolved: Boolean) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Avatar(author)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(authorName(author), style = MaterialTheme.typography.labelLarge)
+                detail?.let { SecondaryText(it) }
+            }
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                textDecoration = if (isResolved) TextDecoration.LineThrough else null,
+            )
+        }
+    }
+}
+
+private fun authorName(author: String) = when (author) {
+    USER_AUTHOR -> "You"
+    else -> author.replaceFirstChar { it.uppercase() }
+}
+
+/** Blue for you, amber for the automatic reviewers, neutral for the agent. */
+@Composable
+private fun Avatar(author: String) {
+    val extra = Checkpoint.colors
+    val scheme = MaterialTheme.colorScheme
+    val (background, content) = when (author) {
+        USER_AUTHOR -> scheme.primary to scheme.onPrimary
+        REVIEWER_AUTHOR -> extra.warnSoft to extra.onWarnSoft
+        else -> scheme.surfaceContainerHighest to scheme.onSurface
+    }
+    Box(Modifier.size(28.dp).background(background, CircleShape), contentAlignment = Alignment.Center) {
+        Text(authorName(author).take(1), style = MaterialTheme.typography.labelMedium, color = content)
+    }
+}
+
+private const val USER_AUTHOR = "user"
+private const val REVIEWER_AUTHOR = "reviewer"
 
 @Composable
 fun TextInputDialog(
