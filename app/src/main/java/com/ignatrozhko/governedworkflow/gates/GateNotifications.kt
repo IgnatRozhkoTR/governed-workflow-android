@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.ignatrozhko.governedworkflow.MainActivity
 import com.ignatrozhko.governedworkflow.R
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
@@ -37,7 +38,8 @@ class GateNotifications(private val context: Context) {
         val notification = NotificationCompat.Builder(context, GATE_CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("${gate.label} waits for approval")
-            .setContentText("Phase ${gate.phase} · ${gate.workspace.projectId}")
+            .setContentText("Gate ${gate.phase} · ${gate.workspace.projectId}")
+            .setColor(ContextCompat.getColor(context, R.color.gate_notification))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

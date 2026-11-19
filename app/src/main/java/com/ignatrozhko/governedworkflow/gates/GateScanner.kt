@@ -4,6 +4,7 @@ import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.PanelException
 import com.ignatrozhko.governedworkflow.data.api.StateFetch
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
+import com.ignatrozhko.governedworkflow.data.api.currentPhaseSince
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -24,8 +25,8 @@ class GateScanner {
 
     /** One unreadable workspace must not hide the gates of all the others, so its failure only drops it from this scan. */
     private suspend fun waitingGate(api: PanelApi, workspace: WorkspaceRef): WaitingGate? = try {
-        val gate = (api.getState(workspace, etag = null) as? StateFetch.Fresh)?.state?.pendingGate
-        gate?.let { WaitingGate(workspace, it.phase, ticketLabel(api, workspace)) }
+        val state = (api.getState(workspace, etag = null) as? StateFetch.Fresh)?.state
+        state?.pendingGate?.let { WaitingGate(workspace, it.phase, ticketLabel(api, workspace), state.currentPhaseSince()) }
     } catch (error: PanelException) {
         null
     }

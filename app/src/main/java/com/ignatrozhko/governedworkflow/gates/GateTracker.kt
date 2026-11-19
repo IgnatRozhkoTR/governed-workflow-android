@@ -1,9 +1,13 @@
 package com.ignatrozhko.governedworkflow.gates
 
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
+import java.time.LocalDateTime
 
-/** A workspace currently blocked on a user gate; [label] is the ticket id when the workspace has one, else the branch. */
-data class WaitingGate(val workspace: WorkspaceRef, val phase: String, val label: String)
+/**
+ * A workspace currently blocked on a user gate; [label] is the ticket id when the workspace has one, else the branch.
+ * [since] is when the gate started holding, when the phase history says so.
+ */
+data class WaitingGate(val workspace: WorkspaceRef, val phase: String, val label: String, val since: LocalDateTime? = null)
 
 data class GateChanges(val appeared: List<WaitingGate>, val cleared: Set<WorkspaceRef>)
 
