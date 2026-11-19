@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +27,9 @@ import com.ignatrozhko.governedworkflow.terminal.core.TerminalInput
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalSession
 import com.ignatrozhko.governedworkflow.terminal.view.TerminalHostEvents
 import com.ignatrozhko.governedworkflow.terminal.view.TerminalHostView
+import com.ignatrozhko.governedworkflow.terminal.view.TerminalPalette
 import com.ignatrozhko.governedworkflow.ui.common.writeClipboardText
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 
 /** One emulator view bound to [session]; recreated per session so each keeps its own screen and scrollback. */
 @Composable
@@ -41,8 +44,9 @@ fun TerminalPane(
     val connection by session.state.collectAsStateWithLifecycle()
     var isSelectionActive by remember { mutableStateOf(false) }
     val currentOnFontSizeChanged by rememberUpdatedState(onFontSizeChanged)
+    val palette = if (Checkpoint.colors.isNight) TerminalPalette.Night else TerminalPalette.Day
     val hostView = remember(session) {
-        TerminalHostView(context, session, input, initialFontSize, object : TerminalHostEvents {
+        TerminalHostView(context, session, input, initialFontSize, palette, object : TerminalHostEvents {
             override fun onSelectionChanged(hasSelection: Boolean) {
                 isSelectionActive = hasSelection
             }
@@ -52,6 +56,7 @@ fun TerminalPane(
             override fun onClipboardCopy(text: String) = writeClipboardText(context, CLIP_LABEL, text)
         })
     }
+    LaunchedEffect(hostView, palette) { hostView.setPalette(palette) }
     DisposableEffect(hostView) {
         onHostView(hostView)
         onDispose {

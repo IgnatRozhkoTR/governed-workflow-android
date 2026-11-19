@@ -25,17 +25,16 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ignatrozhko.governedworkflow.terminal.core.StickyKey
 import com.ignatrozhko.governedworkflow.terminal.core.StickyLevel
 import com.ignatrozhko.governedworkflow.terminal.core.StickyModifiers
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,7 +50,7 @@ fun ExtraKeysBar(
     onAction: (ExtraKeyAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow).padding(2.dp)) {
+    BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(horizontal = 8.dp, vertical = 4.dp)) {
         val isScrolling = maxWidth / rows.maxOf { it.size } < MIN_KEY_WIDTH
         Column(if (isScrolling) Modifier.horizontalScroll(rememberScrollState()) else Modifier.fillMaxWidth()) {
             rows.forEach { row ->
@@ -73,14 +72,14 @@ private fun ExtraKeyButton(key: ExtraKey, stickyLevel: StickyLevel, onAction: (E
     var isPressed by remember { mutableStateOf(false) }
     val background = when {
         stickyLevel == StickyLevel.Locked -> MaterialTheme.colorScheme.primary
-        stickyLevel == StickyLevel.Once || isPressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-        else -> Color.Transparent
+        stickyLevel == StickyLevel.Once || isPressed -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
     Box(
         modifier = modifier
             .height(KEY_HEIGHT)
-            .padding(1.dp)
-            .background(background, RoundedCornerShape(6.dp))
+            .padding(KEY_GAP)
+            .background(background, RoundedCornerShape(10.dp))
             .pointerInput(key) {
                 detectTapGestures(onPress = {
                     isPressed = true
@@ -100,7 +99,7 @@ private fun ExtraKeyButton(key: ExtraKey, stickyLevel: StickyLevel, onAction: (E
         if (key.iconRes != null) {
             Icon(painterResource(key.iconRes), contentDescription = key.label, tint = contentColor, modifier = Modifier.size(18.dp))
         } else {
-            Text(key.label, fontSize = 12.sp, softWrap = false, textAlign = TextAlign.Center, maxLines = 1, color = contentColor)
+            Text(key.label, style = MonoText.small, softWrap = false, textAlign = TextAlign.Center, maxLines = 1, color = contentColor)
         }
     }
 }
@@ -119,7 +118,8 @@ private fun StickyModifiers.levelOf(action: ExtraKeyAction): StickyLevel = when 
     null -> StickyLevel.Off
 }
 
-private val KEY_HEIGHT = 40.dp
+private val KEY_HEIGHT = 42.dp
+private val KEY_GAP = 2.dp
 private val MIN_KEY_WIDTH = 34.dp
 private const val REPEAT_START_DELAY_MS = 400L
 private const val REPEAT_INTERVAL_MS = 60L

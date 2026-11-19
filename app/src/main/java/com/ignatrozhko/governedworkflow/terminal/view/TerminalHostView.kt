@@ -45,14 +45,18 @@ class TerminalHostView(
     private val session: TerminalSession,
     private val input: TerminalInput,
     private val initialFontSize: Int,
+    palette: TerminalPalette,
     private val events: TerminalHostEvents,
 ) : FrameLayout(context) {
 
+    @Volatile
+    private var palette = palette
     private val mainHandler = Handler(Looper.getMainLooper())
     private val webView = WebView(context)
     private val inputField = TerminalInputField(context, input, ::paste)
     private val assetLoader = WebViewAssetLoader.Builder()
         .addPathHandler(ASSETS_PATH, WebViewAssetLoader.AssetsPathHandler(context))
+        .addPathHandler(RESOURCES_PATH, WebViewAssetLoader.ResourcesPathHandler(context))
         .build()
     private val outputLock = Any()
     private val pendingReplay = StringBuilder()
@@ -64,7 +68,7 @@ class TerminalHostView(
     private val flushOutput = Runnable(::flushPendingOutput)
 
     init {
-        setBackgroundColor(TERMINAL_BACKGROUND)
+        setBackgroundColor(Color.parseColor(palette.background))
         configureWebView()
         addView(inputField, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -96,6 +100,16 @@ class TerminalHostView(
         }
     }
 
+    /** Follows the app's night/day switch without reloading the emulator or its scrollback. */
+    fun setPalette(newPalette: TerminalPalette) {
+        if (newPalette == palette) return
+        palette = newPalette
+        setBackgroundColor(Color.parseColor(newPalette.background))
+        webView.setBackgroundColor(Color.parseColor(newPalette.background))
+        val isReady = synchronized(outputLock) { isEmulatorReady }
+        if (isReady) webView.evaluateJavascript("gw.setTheme(${newPalette.toXtermTheme()})", null)
+    }
+
     fun clearSelection() {
         webView.evaluateJavascript("gw.clearSelection()", null)
     }
@@ -123,7 +137,7 @@ class TerminalHostView(
 
     @Suppress("DEPRECATION")
     private fun configureWebView() {
-        webView.setBackgroundColor(TERMINAL_BACKGROUND)
+        webView.setBackgroundColor(Color.parseColor(palette.background))
         webView.isFocusable = false
         webView.isFocusableInTouchMode = false
         webView.isLongClickable = false
@@ -211,6 +225,7 @@ class TerminalHostView(
             put("fontSize", initialFontSize)
             put("minFontSize", AppSettings.MIN_TERMINAL_FONT_SIZE)
             put("maxFontSize", AppSettings.MAX_TERMINAL_FONT_SIZE)
+            put("theme", palette.toXtermTheme())
         }.toString()
 
         @JavascriptInterface
@@ -262,9 +277,9 @@ class TerminalHostView(
     private companion object {
         const val BRIDGE_NAME = "GwBridge"
         const val ASSETS_PATH = "/assets/"
+        const val RESOURCES_PATH = "/res/"
         const val TERMINAL_PAGE_URL = "https://${WebViewAssetLoader.DEFAULT_DOMAIN}/assets/terminal/index.html"
         const val MAX_WRITE_CHARS = 256 * 1024
         const val FULL_TEXT_ZOOM = 100
-        val TERMINAL_BACKGROUND = Color.parseColor("#1A1A2E")
     }
 }

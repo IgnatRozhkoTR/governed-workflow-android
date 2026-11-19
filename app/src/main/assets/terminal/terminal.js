@@ -1,18 +1,10 @@
-(function () {
+// xterm measures the cell size once at open, so the emulator starts only after JetBrains Mono has loaded.
+function startTerminal() {
   'use strict';
 
   var bridge = window.GwBridge;
   var config = JSON.parse(bridge.config());
-
-  // Same palette as the web panel's dark terminal theme.
-  var THEME = {
-    background: '#1a1a2e', foreground: '#e0e0e0', cursor: '#e0e0e0', cursorAccent: '#1a1a2e',
-    selectionBackground: 'rgba(129, 140, 248, 0.45)',
-    black: '#2a2a3e', red: '#ff6b6b', green: '#51cf66', yellow: '#ffd43b', blue: '#818cf8',
-    magenta: '#da77f2', cyan: '#22d3ee', white: '#e0e0e0', brightBlack: '#6b7280', brightRed: '#ff8787',
-    brightGreen: '#69db7c', brightYellow: '#ffe066', brightBlue: '#a5b4fc', brightMagenta: '#e599f7',
-    brightCyan: '#67e8f9', brightWhite: '#ffffff'
-  };
+  var FONT_FAMILY = '"JetBrains Mono", monospace';
   var LONG_PRESS_MS = 450;
   var TAP_SLOP_PX = 10;
   var FIT_DEBOUNCE_MS = 60;
@@ -26,8 +18,8 @@
   var container = document.getElementById('terminal');
   var term = new Terminal({
     fontSize: config.fontSize,
-    fontFamily: 'monospace',
-    theme: THEME,
+    fontFamily: FONT_FAMILY,
+    theme: config.theme,
     cursorBlink: false,
     cursorInactiveStyle: 'block',
     scrollback: 5000,
@@ -294,10 +286,13 @@
       term.clearSelection();
       return text;
     },
-    clearSelection: function () { term.clearSelection(); }
+    clearSelection: function () { term.clearSelection(); },
+    setTheme: function (theme) { term.options.theme = theme; }
   };
 
   fitNow();
   bridge.onResize(term.cols, term.rows);
   bridge.onReady();
-})();
+}
+
+document.fonts.load('13px "JetBrains Mono"').then(startTerminal, startTerminal);
