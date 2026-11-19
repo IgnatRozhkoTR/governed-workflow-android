@@ -13,7 +13,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +39,7 @@ import com.ignatrozhko.governedworkflow.R
 import com.ignatrozhko.governedworkflow.connection.ConnectionState
 import com.ignatrozhko.governedworkflow.data.server.ServerEntry
 import com.ignatrozhko.governedworkflow.ui.common.ActionFooter
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.common.EmptyState
 import com.ignatrozhko.governedworkflow.ui.common.ListRowLayout
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
@@ -109,18 +109,16 @@ fun ServersScreen(
         }
     }
     pendingDelete?.let { server ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete ${server.name}?") },
-            text = { Text("The saved URLs and token are removed from this phone.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.delete(server.id)
-                    pendingDelete = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancel") } },
-        )
+        ConfirmDialog(
+            title = "Delete ${server.name}?",
+            message = "The saved URLs and token are removed from this phone.",
+            confirmLabel = "Delete",
+            onDismiss = { pendingDelete = null },
+            isDestructive = true,
+        ) {
+            viewModel.delete(server.id)
+            pendingDelete = null
+        }
     }
 }
 

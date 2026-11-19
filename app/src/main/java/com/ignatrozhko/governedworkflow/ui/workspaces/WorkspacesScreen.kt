@@ -36,6 +36,7 @@ import com.ignatrozhko.governedworkflow.ui.common.PillTone
 import com.ignatrozhko.governedworkflow.ui.common.RowGroup
 import com.ignatrozhko.governedworkflow.ui.common.Tag
 import com.ignatrozhko.governedworkflow.ui.common.waitLabel
+import com.ignatrozhko.governedworkflow.ui.common.withBreakOpportunities
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 
 @Composable
@@ -120,7 +121,7 @@ private fun CreationFlow(creation: WorkspaceCreation, viewModel: WorkspacesViewM
 @Composable
 private fun WorkspaceRowItem(row: WorkspaceRow, phaseNames: PhaseNames, onClick: () -> Unit) {
     ListRowLayout(onClick) {
-        Text(row.summary.branch, style = MonoText.body)
+        Text(row.summary.branch.withBreakOpportunities(), style = MonoText.body)
         FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Tag("Phase ${row.summary.phase}")
             WorkspaceStatus(row, phaseNames)

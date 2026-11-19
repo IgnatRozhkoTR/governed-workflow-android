@@ -36,7 +36,7 @@ import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.common.StatusDot
 import com.ignatrozhko.governedworkflow.ui.common.connectionStatus
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
-import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 
 /**
  * Title row with back, connection dot and menu, then the sessions as one scrolling chip row. [hasGate] marks the
@@ -101,6 +101,7 @@ fun TerminalTopRow(
             message = "The tmux session and everything running in it end on the panel host.",
             confirmLabel = "Kill",
             onDismiss = { isKillConfirmOpen = false },
+            isDestructive = true,
         ) {
             isKillConfirmOpen = false
             onKill()

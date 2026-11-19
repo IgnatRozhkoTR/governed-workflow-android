@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,14 +72,15 @@ fun PrimaryButton(
     isEnabled: Boolean = true,
     icon: Painter? = null,
     height: Dp = BUTTON_HEIGHT,
+    isLoading: Boolean = false,
 ) {
     Button(
         onClick,
         modifier.heightIn(min = height),
-        enabled = isEnabled,
+        enabled = isEnabled && !isLoading,
         shape = CircleShape,
         contentPadding = BUTTON_PADDING,
-    ) { ButtonLabel(text, icon) }
+    ) { ButtonLabel(text, icon, isLoading) }
 }
 
 @Composable
@@ -89,16 +91,17 @@ fun OutlinedActionButton(
     isEnabled: Boolean = true,
     icon: Painter? = null,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    isLoading: Boolean = false,
 ) {
     OutlinedButton(
         onClick,
         modifier.heightIn(min = BUTTON_HEIGHT),
-        enabled = isEnabled,
+        enabled = isEnabled && !isLoading,
         shape = CircleShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = contentColor),
         contentPadding = BUTTON_PADDING,
-    ) { ButtonLabel(text, icon) }
+    ) { ButtonLabel(text, icon, isLoading) }
 }
 
 /** Outlined in the surface color with red text: destructive, but never louder than the primary action. */
@@ -108,8 +111,11 @@ fun DangerButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifie
 }
 
 @Composable
-private fun RowScope.ButtonLabel(text: String, icon: Painter?) {
-    if (icon != null) {
+private fun RowScope.ButtonLabel(text: String, icon: Painter?, isLoading: Boolean = false) {
+    if (isLoading) {
+        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.width(8.dp))
+    } else if (icon != null) {
         Icon(icon, contentDescription = null, Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
     }

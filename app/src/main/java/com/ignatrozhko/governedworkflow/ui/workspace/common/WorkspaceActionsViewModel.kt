@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Base for workspace sections: the shared polled state plus one-at-a-time mutations that report their
- * outcome as a snackbar message and re-poll so the change shows up immediately.
+ * outcome as a snackbar message and re-poll; busy lasts until that poll has published, so the change is on screen when buttons re-enable.
  */
 abstract class WorkspaceActionsViewModel(
     val workspace: WorkspaceRef,
@@ -48,9 +48,9 @@ abstract class WorkspaceActionsViewModel(
             } catch (error: PanelException) {
                 error.message.orEmpty()
             }
-            _isBusy.value = false
             _messages.send(outcome)
-            stateStore.refresh(workspace)
+            stateStore.refreshAndAwait(workspace)
+            _isBusy.value = false
         }
     }
 

@@ -17,6 +17,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -115,15 +119,22 @@ private fun PlanHeader(description: String, comments: PlanComments) {
 
 @Composable
 private fun PlanDecisionFooter(status: String?, isBusy: Boolean, onDecide: (PlanDecision) -> Unit) {
+    var submitted by remember { mutableStateOf<PlanDecision?>(null) }
+    val pending = submitted.takeIf { isBusy }
+    val decide: (PlanDecision) -> Unit = {
+        submitted = it
+        onDecide(it)
+    }
     ActionFooter {
-        OutlinedActionButton("Request changes", { onDecide(PlanDecision.Reject) }, isEnabled = !isBusy && status != REJECTED)
+        OutlinedActionButton("Request changes", { decide(PlanDecision.Reject) }, isEnabled = !isBusy && status != REJECTED, isLoading = pending == PlanDecision.Reject)
         Spacer(Modifier.weight(1f))
         PrimaryButton(
             "Approve plan",
-            { onDecide(PlanDecision.Approve) },
+            { decide(PlanDecision.Approve) },
             Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
             isEnabled = !isBusy && status != APPROVED,
             icon = rememberVectorPainter(Icons.Filled.Check),
+            isLoading = pending == PlanDecision.Approve,
         )
     }
 }

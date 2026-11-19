@@ -6,6 +6,7 @@ import com.ignatrozhko.governedworkflow.data.api.PanelException
 import com.ignatrozhko.governedworkflow.data.api.StateFetch
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -31,13 +32,20 @@ class WorkspaceStateStore(private val connectionManager: ConnectionManager, priv
     fun observe(workspace: WorkspaceRef): StateFlow<StateSnapshot> = poller(workspace).snapshots
 
     fun refresh(workspace: WorkspaceRef) {
-        poller(workspace).pollNow.tryEmit(Unit)
+        poller(workspace).pollNow.tryEmit(null)
+    }
+
+    /** Returns once a poll that started after the call has published its result, or after [REFRESH_TIMEOUT_MS]. */
+    suspend fun refreshAndAwait(workspace: WorkspaceRef) {
+        val published = CompletableDeferred<Unit>()
+        poller(workspace).pollNow.emit(published)
+        withTimeoutOrNull(REFRESH_TIMEOUT_MS) { published.await() }
     }
 
     private fun poller(workspace: WorkspaceRef): Poller = pollers.getOrPut(workspace) { Poller(workspace) }
 
     private inner class Poller(private val workspace: WorkspaceRef) {
-        val pollNow = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        val pollNow = MutableSharedFlow<CompletableDeferred<Unit>?>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
         val snapshots: StateFlow<StateSnapshot> = connectionManager.state
             .pollWhileConnected()
             .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), StateSnapshot())
@@ -47,6 +55,7 @@ class WorkspaceStateStore(private val connectionManager: ConnectionManager, priv
             if (connection !is ConnectionState.Connected) return@transformLatest
             var current = StateSnapshot()
             var etag: String? = null
+            var awaitingPublish: CompletableDeferred<Unit>? = null
             while (true) {
                 current = try {
                     when (val fetch = connection.api.getState(workspace, etag)) {
@@ -57,7 +66,8 @@ class WorkspaceStateStore(private val connectionManager: ConnectionManager, priv
                     current.copy(error = error.message)
                 }
                 emit(current)
-                withTimeoutOrNull(POLL_INTERVAL_MS) { pollNow.first() }
+                awaitingPublish?.complete(Unit)
+                awaitingPublish = withTimeoutOrNull(POLL_INTERVAL_MS) { pollNow.first() }
             }
         }
     }
@@ -65,5 +75,6 @@ class WorkspaceStateStore(private val connectionManager: ConnectionManager, priv
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
         const val POLL_INTERVAL_MS = 3_000L
+        const val REFRESH_TIMEOUT_MS = 6_000L
     }
 }

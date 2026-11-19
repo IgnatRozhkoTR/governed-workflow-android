@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,48 +43,59 @@ fun GateDecisionFooter(
     onReject: (String) -> Unit,
 ) {
     var sheet by remember(gate.phase) { mutableStateOf<GateSheet?>(null) }
+    var submitted by remember(gate.phase) { mutableStateOf<GateSheet?>(null) }
+    val pending = submitted.takeIf { isBusy }
+    LaunchedEffect(isBusy) {
+        if (!isBusy && submitted != null) {
+            submitted = null
+            sheet = null
+        }
+    }
+    val approve: (String) -> Unit = {
+        submitted = GateSheet.Approve
+        onApprove(it)
+    }
+    val reject: (String) -> Unit = {
+        submitted = GateSheet.Reject
+        onReject(it)
+    }
     if (isBarShown) {
         ActionFooter(isAtScreenBottom = isAtScreenBottom) {
-            OutlinedActionButton("Reject", { sheet = GateSheet.Reject }, isEnabled = !isBusy)
+            OutlinedActionButton("Reject", { sheet = GateSheet.Reject }, isEnabled = !isBusy, isLoading = pending == GateSheet.Reject)
             Spacer(Modifier.weight(1f))
             PrimaryButton(
                 "Approve",
-                onClick = { if (gate.acceptsCommitMessage) sheet = GateSheet.Approve else onApprove("") },
+                onClick = { if (gate.acceptsCommitMessage) sheet = GateSheet.Approve else approve("") },
                 modifier = Modifier.widthIn(min = DECISION_BUTTON_MIN_WIDTH),
                 isEnabled = !isBusy,
                 icon = rememberVectorPainter(Icons.Filled.Check),
+                isLoading = pending == GateSheet.Approve,
             )
         }
     }
     when (sheet) {
-        GateSheet.Approve -> ApproveCommitSheet(gate, onDismiss = { sheet = null }) {
-            sheet = null
-            onApprove(it)
-        }
-        GateSheet.Reject -> RejectSheet(gate, onDismiss = { sheet = null }) {
-            sheet = null
-            onReject(it)
-        }
+        GateSheet.Approve -> ApproveCommitSheet(gate, isBusy, pending == GateSheet.Approve, onDismiss = { sheet = null }, onApprove = approve)
+        GateSheet.Reject -> RejectSheet(gate, isBusy, pending == GateSheet.Reject, onDismiss = { sheet = null }, onReject = reject)
         null -> Unit
     }
 }
 
 @Composable
-private fun ApproveCommitSheet(gate: PendingGate, onDismiss: () -> Unit, onApprove: (String) -> Unit) {
+private fun ApproveCommitSheet(gate: PendingGate, isBusy: Boolean, isSubmitting: Boolean, onDismiss: () -> Unit, onApprove: (String) -> Unit) {
     var message by remember { mutableStateOf("") }
     PanelSheet("Approve the commit at gate ${gate.phase}", onDismiss) {
-        LabeledField("Commit message (optional)", message, { message = it }, isMono = true, isSingleLine = false, minLines = 3)
-        SheetActions(onDismiss, "Approve and commit", rememberVectorPainter(Icons.Filled.Check), isConfirmEnabled = true) { onApprove(message.trim()) }
+        LabeledField("Commit message (optional)", message, { message = it }, isMono = true, isSingleLine = false, minLines = 3, isEnabled = !isBusy)
+        SheetActions(onDismiss, "Approve and commit", rememberVectorPainter(Icons.Filled.Check), isConfirmEnabled = true, isBusy, isSubmitting) { onApprove(message.trim()) }
     }
 }
 
 @Composable
-private fun RejectSheet(gate: PendingGate, onDismiss: () -> Unit, onReject: (String) -> Unit) {
+private fun RejectSheet(gate: PendingGate, isBusy: Boolean, isSubmitting: Boolean, onDismiss: () -> Unit, onReject: (String) -> Unit) {
     var feedback by remember { mutableStateOf("") }
     PanelSheet("Request changes at gate ${gate.phase}", onDismiss) {
-        LabeledField("Feedback for the agent", feedback, { feedback = it }, isSingleLine = false, minLines = 4)
+        LabeledField("Feedback for the agent", feedback, { feedback = it }, isSingleLine = false, minLines = 4, isEnabled = !isBusy)
         Text("The agent gets this note and reworks the phase.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SheetActions(onDismiss, "Send and reject", rememberVectorPainter(Icons.AutoMirrored.Filled.Send), isConfirmEnabled = feedback.isNotBlank()) {
+        SheetActions(onDismiss, "Send and reject", rememberVectorPainter(Icons.AutoMirrored.Filled.Send), isConfirmEnabled = feedback.isNotBlank(), isBusy, isSubmitting) {
             onReject(feedback.trim())
         }
     }
@@ -95,11 +107,13 @@ private fun SheetActions(
     confirmLabel: String,
     confirmIcon: Painter,
     isConfirmEnabled: Boolean,
+    isBusy: Boolean,
+    isSubmitting: Boolean,
     onConfirm: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        OutlinedActionButton("Cancel", onDismiss)
+        OutlinedActionButton("Cancel", onDismiss, isEnabled = !isBusy)
         Spacer(Modifier.weight(1f))
-        PrimaryButton(confirmLabel, onConfirm, isEnabled = isConfirmEnabled, icon = confirmIcon)
+        PrimaryButton(confirmLabel, onConfirm, isEnabled = isConfirmEnabled && !isBusy, icon = confirmIcon, isLoading = isSubmitting)
     }
 }

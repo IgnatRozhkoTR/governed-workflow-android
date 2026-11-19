@@ -33,6 +33,7 @@ import com.ignatrozhko.governedworkflow.ui.common.PillTone
 import com.ignatrozhko.governedworkflow.ui.common.RowGroup
 import com.ignatrozhko.governedworkflow.ui.common.StatusDot
 import com.ignatrozhko.governedworkflow.ui.common.waitLabel
+import com.ignatrozhko.governedworkflow.ui.common.withBreakOpportunities
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 
@@ -80,7 +81,7 @@ private fun ProjectList(projects: List<Project>, gates: WaitingGates?, onOpenPro
         return
     }
     RowGroup(projects) { project ->
-        ListRow(project.name, onClick = { onOpenProject(project) }, subtitle = project.path) {
+        ListRow(project.name, onClick = { onOpenProject(project) }, subtitle = project.path.withBreakOpportunities()) {
             val gateCount = gates?.countFor(project.id) ?: 0
             if (gateCount > 0) Pill(gateCount.toString(), PillTone.Gate, hasDot = true)
         }
@@ -104,7 +105,7 @@ private fun GateSummary(count: Int) {
 private fun WaitingGateRow(gate: WaitingGate, gates: WaitingGates, onClick: () -> Unit) {
     val phase = gates.phaseNames.nameFor(gate.phase) ?: "Gate ${gate.phase}"
     ListRow(
-        title = gate.label,
+        title = if (gate.label == gate.workspace.branch) gate.label.withBreakOpportunities() else gate.label,
         onClick = onClick,
         titleStyle = if (gate.label == gate.workspace.branch) MonoText.body else MaterialTheme.typography.bodyLarge,
         subtitle = listOfNotNull(phase, gate.since?.let(::waitLabel)).joinToString(" · "),

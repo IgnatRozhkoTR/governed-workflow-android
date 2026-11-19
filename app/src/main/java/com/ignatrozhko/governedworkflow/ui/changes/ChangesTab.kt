@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,7 +55,9 @@ import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.LoadStateContent
 import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
 import com.ignatrozhko.governedworkflow.ui.common.RowGroup
+import com.ignatrozhko.governedworkflow.ui.common.ResolutionDialog
 import com.ignatrozhko.governedworkflow.ui.common.SegmentedChoice
+import com.ignatrozhko.governedworkflow.ui.common.withBreakOpportunities
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
@@ -161,7 +162,7 @@ private fun RepoPicker(repos: List<CodeRepo>, selected: CodeRepo?, onSelect: (Co
                     text = {
                         Column {
                             Text(repo.name)
-                            Text(repo.path, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(repo.path.withBreakOpportunities(), style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                     onClick = {
@@ -238,22 +239,10 @@ private fun ReviewLinks(isHidingResolved: Boolean, onHidingResolvedChange: (Bool
         }
     }
     if (isChoosingResolution) {
-        AlertDialog(
-            onDismissRequest = { isChoosingResolution = false },
-            title = { Text("Resolve all open review issues as") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReviewResolution.entries.forEach { resolution ->
-                        OutlinedActionButton(resolution.label, onClick = {
-                            isChoosingResolution = false
-                            viewModel.resolveAllReviewIssues(resolution)
-                        }, Modifier.fillMaxWidth())
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { isChoosingResolution = false }) { Text("Cancel") } },
-        )
+        ResolutionDialog("Resolve all open review issues as", onDismiss = { isChoosingResolution = false }) {
+            isChoosingResolution = false
+            viewModel.resolveAllReviewIssues(it)
+        }
     }
 }
 
@@ -280,9 +269,9 @@ private fun FileRow(file: DiffFile, openComments: Int, onClick: () -> Unit) {
             Text("−${file.deletions}", style = MonoText.small, color = MaterialTheme.colorScheme.error)
         },
     ) {
-        Text(file.path.substringAfterLast('/'), style = MonoText.code, color = MaterialTheme.colorScheme.onSurface)
+        Text(file.path.substringAfterLast('/').withBreakOpportunities(), style = MonoText.code, color = MaterialTheme.colorScheme.onSurface)
         val location = file.oldPath?.let { "from $it" } ?: file.path.substringBeforeLast('/', missingDelimiterValue = "")
-        if (location.isNotEmpty()) Text(location, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (location.isNotEmpty()) Text(location.withBreakOpportunities(), style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

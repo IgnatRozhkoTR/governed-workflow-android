@@ -53,7 +53,7 @@ import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.common.PanelCard
 import com.ignatrozhko.governedworkflow.ui.common.SegmentedChoice
 import com.ignatrozhko.governedworkflow.ui.common.ToggleSwitch
-import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 import kotlinx.coroutines.launch
@@ -142,9 +142,9 @@ private fun SwitchRow(title: String, subtitle: String, isChecked: Boolean, isBus
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReviewModeRow(title: String, current: String, isBusy: Boolean, onSelect: (ReviewMode) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp - CHIP_TOUCH_OVERHANG)) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp - CHIP_TOUCH_OVERHANG * 2)) {
             ReviewMode.entries.forEach { mode ->
                 ChoiceChip(mode.label, isSelected = mode.wireValue == current, onClick = { if (!isBusy) onSelect(mode) })
             }
@@ -224,3 +224,4 @@ private fun ModulesGroup(modules: List<ModuleInfo>, enabled: Set<String>, isBusy
 }
 
 private val THEME_CHOICE_WIDTH = 176.dp
+private val CHIP_TOUCH_OVERHANG = 6.dp

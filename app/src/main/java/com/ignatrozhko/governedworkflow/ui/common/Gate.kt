@@ -78,3 +78,29 @@ fun GateBar(text: String, actionLabel: String, onClick: () -> Unit, modifier: Mo
         Text("$actionLabel ›", style = MaterialTheme.typography.labelLarge, color = Checkpoint.colors.onGateSoft)
     }
 }
+
+/** A compact reminder, in the warn color, that the screen shows saved data because the panel cannot be reached. */
+@Composable
+fun OfflineBanner(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 36.dp)
+            .background(Checkpoint.colors.warnSoft, CircleShape)
+            .clickable(onClickLabel = "Retry", onClick = onRetry)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        StatusDot(Checkpoint.colors.warn)
+        Text(
+            "Offline · showing saved data",
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.labelLarge,
+            color = Checkpoint.colors.onWarnSoft,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text("Retry ›", style = MaterialTheme.typography.labelLarge, color = Checkpoint.colors.onWarnSoft)
+    }
+}

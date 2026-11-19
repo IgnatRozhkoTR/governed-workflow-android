@@ -51,7 +51,7 @@ import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.workspace.NotifyMessage
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceSection
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
-import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 
@@ -86,7 +86,7 @@ fun OverviewTab(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        state.pendingGate?.let { gate -> PendingGateCard(gate, state, context, openEvidence) }
+        state.pendingGate?.let { gate -> PendingGateCard(gate, state, context, isBusy, openEvidence) }
         PanelCard { PhaseStepper(workflowSteps(state, phaseNames), Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) }
         CommitSummaryCard(changedFiles, verification, onOpenChanges)
         SectionChips(state, onOpenSection)
@@ -98,7 +98,7 @@ fun OverviewTab(
 }
 
 @Composable
-private fun PendingGateCard(gate: PendingGate, state: WorkspaceState, context: WorkspaceContext?, onReview: (GateEvidence) -> Unit) {
+private fun PendingGateCard(gate: PendingGate, state: WorkspaceState, context: WorkspaceContext?, isBusy: Boolean, onReview: (GateEvidence) -> Unit) {
     val prompt = gatePrompt(gate)
     val holding = state.currentPhaseSince()?.let { " · holding ${waitLabel(it)}" }.orEmpty()
     GateCard(caption = "Gate ${gate.phase}$holding", question = prompt.question) {
@@ -106,7 +106,7 @@ private fun PendingGateCard(gate: PendingGate, state: WorkspaceState, context: W
             Text(it, style = MaterialTheme.typography.bodyLarge, color = Checkpoint.colors.onGateSoft)
         }
         Row(
-            Modifier.clickable { onReview(prompt.evidence) }.padding(top = 6.dp, bottom = 2.dp),
+            Modifier.clickable(enabled = !isBusy) { onReview(prompt.evidence) }.padding(top = 6.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(prompt.evidence.linkLabel, style = MaterialTheme.typography.labelLarge, color = Checkpoint.colors.onGateSoft)
@@ -204,6 +204,7 @@ private fun ArchiveButton(isBusy: Boolean, onArchive: () -> Unit) {
             message = "The workspace leaves the active list. Its branch and history stay in git.",
             confirmLabel = "Archive",
             onDismiss = { isConfirming = false },
+            isDestructive = true,
         ) {
             isConfirming = false
             onArchive()

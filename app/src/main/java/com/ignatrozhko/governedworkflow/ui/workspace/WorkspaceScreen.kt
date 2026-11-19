@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ignatrozhko.governedworkflow.data.api.DiffFile
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceContext
+import com.ignatrozhko.governedworkflow.connection.ConnectionState
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.ui.changes.ChangesTab
 import com.ignatrozhko.governedworkflow.ui.changes.ChangesViewModel
@@ -52,6 +53,7 @@ import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
 import com.ignatrozhko.governedworkflow.ui.common.GateBar
 import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
+import com.ignatrozhko.governedworkflow.ui.common.OfflineBanner
 import com.ignatrozhko.governedworkflow.ui.common.PanelTopBar
 import com.ignatrozhko.governedworkflow.ui.overview.GateDecisionFooter
 import com.ignatrozhko.governedworkflow.ui.overview.OverviewTab
@@ -91,6 +93,8 @@ fun WorkspaceScreen(
     val context by workspaceViewModel.context.collectAsStateWithLifecycle()
     val isBusy by workspaceViewModel.isBusy.collectAsStateWithLifecycle()
     val pendingGate = snapshot.state?.pendingGate
+    val connection by container.connectionManager.state.collectAsStateWithLifecycle()
+    val isShowingSavedData = connection is ConnectionState.Unreachable && snapshot.state != null
     val snackbarHostState = remember { SnackbarHostState() }
     ShowMessages(workspaceViewModel.messages, snackbarHostState)
     ShowMessages(changesViewModel.messages, snackbarHostState)
@@ -162,6 +166,9 @@ fun WorkspaceScreen(
         Row(Modifier.padding(padding).consumeWindowInsets(padding)) {
             if (isNavigationShown && isLandscape) WorkspaceNavigationRail(tab, changedFileCount) { tab = it }
             Column(Modifier.weight(1f).imePadding()) {
+                if (isShowingSavedData && !isTerminal) {
+                    OfflineBanner(container.connectionManager::refresh, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
                 if (pendingGate != null && !isTerminal && !isOverviewRoot) {
                     GateBar("Gate ${pendingGate.phase} needs you", "Decide", openDecision, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                 }

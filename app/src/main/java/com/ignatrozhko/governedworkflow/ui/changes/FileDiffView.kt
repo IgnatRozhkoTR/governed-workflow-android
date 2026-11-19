@@ -58,7 +58,7 @@ import com.ignatrozhko.governedworkflow.data.diff.UnifiedDiffParser
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
-import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.TextInputDialog
@@ -268,7 +268,7 @@ private fun AnnotationNote(annotation: Annotation, viewModel: ChangesViewModel) 
         }
     }
     if (isDeleting) {
-        ConfirmDialog("Delete annotation?", "Agents and reviewers will no longer see this note.", "Delete", onDismiss = { isDeleting = false }) {
+        ConfirmDialog("Delete annotation?", "Agents and reviewers will no longer see this note.", "Delete", onDismiss = { isDeleting = false }, isDestructive = true) {
             isDeleting = false
             viewModel.deleteAnnotation(annotation.id)
         }

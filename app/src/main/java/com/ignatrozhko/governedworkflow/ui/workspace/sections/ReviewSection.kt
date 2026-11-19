@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +23,7 @@ import com.ignatrozhko.governedworkflow.data.api.Comment
 import com.ignatrozhko.governedworkflow.data.api.ReviewResolution
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.reviewComments
+import com.ignatrozhko.governedworkflow.ui.common.ResolutionDialog
 import com.ignatrozhko.governedworkflow.ui.common.Pill
 import com.ignatrozhko.governedworkflow.ui.common.PillTone
 import com.ignatrozhko.governedworkflow.ui.common.SegmentedChoice
@@ -62,7 +62,7 @@ fun ReviewSection(
         }
     }
     if (isChoosingResolution) {
-        ResolutionDialog(onDismiss = { isChoosingResolution = false }) {
+        ResolutionDialog("Resolve all open issues as", onDismiss = { isChoosingResolution = false }) {
             isChoosingResolution = false
             viewModel.resolveAllReviewIssues(it)
         }
@@ -85,19 +85,3 @@ private fun ReviewFileCard(file: String, issues: List<Comment>, onResolve: (Long
     }
 }
 
-@Composable
-private fun ResolutionDialog(onDismiss: () -> Unit, onChoose: (ReviewResolution) -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Resolve all open issues as") },
-        text = {
-            Column {
-                ReviewResolution.entries.forEach { resolution ->
-                    OutlinedButton(onClick = { onChoose(resolution) }) { Text(resolution.label) }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}

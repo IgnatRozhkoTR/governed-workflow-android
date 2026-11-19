@@ -84,7 +84,7 @@ fun PanelTopBar(
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), maxLines = TITLE_MAX_LINES, overflow = TextOverflow.Ellipsis)
             if (subtitle != null && switchError == null) {
-                Text(subtitle, style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(subtitle.withBreakOpportunities(), style = MonoText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 ConnectionSubtitle(connection, switchError)
             }

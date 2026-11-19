@@ -45,7 +45,7 @@ import com.ignatrozhko.governedworkflow.ui.common.waitLabel
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
-import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
 

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -17,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.common.CenteredText
 import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
 
@@ -38,17 +38,14 @@ fun WorkspaceLauncher(status: WorkspaceSessionStatus, isBusy: Boolean, onResume:
         OutlinedButton(onClick = { isConfirmOpen = true }, enabled = !isBusy) { Text("Start fresh") }
     }
     if (isConfirmOpen) {
-        AlertDialog(
-            onDismissRequest = { isConfirmOpen = false },
-            title = { Text("Start a fresh Claude session?") },
-            text = { Text("Claude starts a new conversation instead of resuming the previous one.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    isConfirmOpen = false
-                    onStartFresh()
-                }) { Text("Start fresh") }
-            },
-            dismissButton = { TextButton(onClick = { isConfirmOpen = false }) { Text("Cancel") } },
-        )
+        ConfirmDialog(
+            title = "Start a fresh Claude session?",
+            message = "Claude starts a new conversation instead of resuming the previous one.",
+            confirmLabel = "Start fresh",
+            onDismiss = { isConfirmOpen = false },
+        ) {
+            isConfirmOpen = false
+            onStartFresh()
+        }
     }
 }
