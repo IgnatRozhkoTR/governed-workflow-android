@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import com.ignatrozhko.governedworkflow.R
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import kotlin.math.roundToInt
@@ -168,9 +175,10 @@ private fun DiagramError(message: String, source: String) {
 private fun FullScreenDiagram(title: String, source: String, onClose: () -> Unit) {
     val palette = rememberDiagramPalette()
     var render by remember(source, palette) { mutableStateOf<DiagramRender>(DiagramRender.Rendering) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        DialogSystemBarIcons()
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column {
+            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close diagram") }
@@ -188,6 +196,20 @@ private fun FullScreenDiagram(title: String, source: String, onClose: () -> Unit
                     }
                 }
             }
+        }
+    }
+}
+
+/** A dialog window keeps the platform's light-on-dark bar icons unless told otherwise, which vanish on the day background. */
+@Composable
+private fun DialogSystemBarIcons() {
+    val view = LocalView.current
+    val isNight = Checkpoint.colors.isNight
+    SideEffect {
+        val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !isNight
+            isAppearanceLightNavigationBars = !isNight
         }
     }
 }

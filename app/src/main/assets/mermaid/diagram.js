@@ -5,6 +5,8 @@
   var LANE_TITLE_PADDING = 24;
   var VIEW_MARGIN = 12;
   var TIP_VISIBLE_MS = 3500;
+  var LANE_TITLE = /^(\s*)subgraph\s+([\w-]+)\s*\[(.+)\]\s*$/gm;
+  var LANE_TITLE_PLACEHOLDER = '…';
 
   var bridge = window.GwDiagram;
   var palette = JSON.parse(bridge.palette());
@@ -50,6 +52,14 @@
   // Agents write "\n" inside labels to mean a line break, as the web panel renders it.
   var source = bridge.source().replace(/\\n/g, '<br/>');
 
+  // Mermaid widens a lane to fit its title, so long titles push lanes over their neighbours. Lanes are laid out with a
+  // placeholder title and get the real one back, clipped to the lane, once the layout is done.
+  var laneTitles = {};
+  source = source.replace(LANE_TITLE, function (line, indent, id, title) {
+    laneTitles[id] = title.replace(/^"(.*)"$/, '$1').replace(/<br\/>/g, ' ').trim();
+    return indent + 'subgraph ' + id + '["' + LANE_TITLE_PLACEHOLDER + '"]';
+  });
+
   var fontReady = document.fonts && document.fonts.load
     ? document.fonts.load('12px "JetBrains Mono"').catch(function () {})
     : Promise.resolve();
@@ -80,22 +90,33 @@
       var grown = Math.max(width, MIN_LANE_WIDTH);
       rect.setAttribute('x', rect.x.baseVal.value - (grown - width) / 2);
       rect.setAttribute('width', grown);
-      if (label) limitTitle(label, grown);
+      if (label) limitTitle(label, grown, laneTitles[cluster.id] || label.textContent.trim());
     });
     fitViewBoxToContent(svg);
   }
 
-  function limitTitle(label, laneWidth) {
-    var text = label.textContent.trim();
+  function limitTitle(label, laneWidth, text) {
     var box = label.querySelector('foreignObject');
     var inner = label.querySelector('span, .nodeLabel');
     if (!box || !inner) return;
+    inner.textContent = text;
     var room = laneWidth - LANE_TITLE_PADDING;
     var shift = (Number(box.getAttribute('width')) - room) / 2;
     box.setAttribute('width', room);
     box.setAttribute('x', Number(box.getAttribute('x') || 0) + shift);
-    inner.style.maxWidth = room + 'px';
+    box.style.overflow = 'hidden';
+    clipToOneLine(box.firstElementChild || inner, room);
+    label.querySelectorAll('span, p').forEach(function (part) { part.style.display = 'inline'; });
     label.setAttribute('data-title', text);
+  }
+
+  function clipToOneLine(holder, width) {
+    holder.style.display = 'block';
+    holder.style.width = width + 'px';
+    holder.style.maxWidth = width + 'px';
+    holder.style.overflow = 'hidden';
+    holder.style.textOverflow = 'ellipsis';
+    holder.style.whiteSpace = 'nowrap';
   }
 
   function fitViewBoxToContent(svg) {
