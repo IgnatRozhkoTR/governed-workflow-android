@@ -1,34 +1,68 @@
 package com.ignatrozhko.governedworkflow.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 
-object PanelColors {
-    val Indigo = Color(0xFF818CF8)
-    val Green = Color(0xFF51CF66)
-    val Amber = Color(0xFFFFD43B)
-    val Red = Color(0xFFFF6B6B)
-    val TerminalBackground = Color(0xFF1A1A2E)
-}
-
-private val DarkColors = darkColorScheme(
-    primary = PanelColors.Indigo,
-    onPrimary = Color(0xFF14143A),
-    primaryContainer = Color(0xFF2E3170),
-    onPrimaryContainer = Color(0xFFE0E0FF),
-    secondary = Color(0xFF22D3EE),
-    tertiary = PanelColors.Green,
-    error = PanelColors.Red,
-    background = Color(0xFF121218),
-    surface = Color(0xFF121218),
-    surfaceContainer = Color(0xFF1C1C26),
-    surfaceContainerHigh = Color(0xFF24243A),
-    surfaceContainerLow = Color(0xFF17171F),
+private val CheckpointShapes = Shapes(
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
+private val LocalCheckpointColors = staticCompositionLocalOf { NightExtra }
+
+/** The Checkpoint colors Material 3 has no slot for: gate, status, diff and terminal. */
+object Checkpoint {
+    val colors: CheckpointExtraColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalCheckpointColors.current
+}
+
+/** Night and day are separate token sets that follow the system setting; the system bar icons follow the active one. */
 @Composable
-fun GovernedWorkflowTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = DarkColors, content = content)
+fun GovernedWorkflowTheme(isNight: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    SystemBarAppearance(isNight)
+    CompositionLocalProvider(LocalCheckpointColors provides if (isNight) NightExtra else DayExtra) {
+        MaterialTheme(
+            colorScheme = if (isNight) NightColors else DayColors,
+            typography = CheckpointTypography,
+            shapes = CheckpointShapes,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun SystemBarAppearance(isNight: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    SideEffect {
+        val window = view.context.findActivity()?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !isNight
+            isAppearanceLightNavigationBars = !isNight
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="launcher_background">#1A1A2E</color>
-    <color name="window_background">#121218</color>
+    <color name="ic_launcher_background">#22307A</color>
+    <color name="window_background">#F3F4F1</color>
+    <color name="gate_notification">#E85D00</color>
 </resources>
