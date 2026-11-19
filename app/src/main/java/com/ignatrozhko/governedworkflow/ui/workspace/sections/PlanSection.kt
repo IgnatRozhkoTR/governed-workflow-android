@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.CommentTargets
 import com.ignatrozhko.governedworkflow.data.api.NewComment
@@ -25,7 +24,9 @@ import com.ignatrozhko.governedworkflow.data.api.PlanSubphase
 import com.ignatrozhko.governedworkflow.data.api.PlanTask
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.commentsFor
-import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.common.Pill
+import com.ignatrozhko.governedworkflow.ui.common.PillTone
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleSection
@@ -36,7 +37,6 @@ import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
-import com.ignatrozhko.governedworkflow.ui.workspace.common.StatusPill
 import com.ignatrozhko.governedworkflow.ui.workspace.common.countLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.openCommentsLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
@@ -95,7 +95,7 @@ private fun PlanHeader(
     SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Plan", style = MaterialTheme.typography.titleMedium)
-            status?.let { StatusPill(it, planStatusColor(it)) }
+            status?.let { Pill(it, planStatusTone(it)) }
         }
         if (description.isNotBlank()) {
             CollapsibleSection("Description", "plan:description", subtitle = previewLine(description)) { MarkdownText(description) }
@@ -153,15 +153,15 @@ private fun SubphaseCard(subphase: PlanSubphase, scope: PhaseScope, currentPhase
 
 @Composable
 private fun SubphaseBadge(isCurrent: Boolean, doneCount: Int, taskCount: Int) = when {
-    isCurrent -> StatusPill("current", PanelColors.Amber)
-    taskCount > 0 && doneCount == taskCount -> StatusPill("done", PanelColors.Green)
-    doneCount > 0 -> StatusPill("in progress", PanelColors.Amber)
-    else -> StatusPill("pending", PanelColors.Indigo)
+    isCurrent -> Pill("current", PillTone.Info)
+    taskCount > 0 && doneCount == taskCount -> Pill("done", PillTone.Ok)
+    doneCount > 0 -> Pill("in progress", PillTone.Info)
+    else -> Pill("pending", PillTone.Line)
 }
 
 @Composable
 private fun ScopeLists(scope: PhaseScope) {
-    ScopeList("Must", scope.must, PanelColors.Red)
+    ScopeList("Must", scope.must, MaterialTheme.colorScheme.error)
     ScopeList("May", scope.may, MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -169,7 +169,7 @@ private fun ScopeLists(scope: PhaseScope) {
 private fun ScopeList(label: String, paths: List<String>, color: Color) {
     if (paths.isEmpty()) return
     Text(label, style = MaterialTheme.typography.labelMedium, color = color)
-    paths.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+    paths.forEach { Text("• $it", style = MonoText.small) }
 }
 
 /** Each task is its own toggle: the title and status stay visible, the description, files and comments open on tap. */
@@ -180,11 +180,11 @@ private fun TaskSection(task: PlanTask, memoryKey: String, comments: PlanComment
         title = task.title,
         memoryKey = memoryKey,
         subtitle = subtitleOf(task.agent, comments.openLabel(target)),
-        badge = { if (task.status.isNotEmpty()) StatusPill(task.status, taskStatusColor(task.status)) },
+        badge = { if (task.status.isNotEmpty()) Pill(task.status, taskStatusTone(task.status)) },
         titleStyle = MaterialTheme.typography.bodyMedium,
     ) {
         if (task.description.isNotEmpty()) MarkdownText(task.description)
-        task.files.forEach { Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+        task.files.forEach { Text(it, style = MonoText.small) }
         comments.Thread(target)
     }
 }
@@ -193,14 +193,14 @@ private const val APPROVED = "approved"
 private const val REJECTED = "rejected"
 private const val DONE = "done"
 
-fun planStatusColor(status: String) = when (status) {
-    APPROVED -> PanelColors.Green
-    REJECTED -> PanelColors.Red
-    else -> PanelColors.Amber
+fun planStatusTone(status: String) = when (status) {
+    APPROVED -> PillTone.Ok
+    REJECTED -> PillTone.Bad
+    else -> PillTone.Warn
 }
 
-fun taskStatusColor(status: String) = when (status) {
-    DONE, "completed" -> PanelColors.Green
-    "in_progress" -> PanelColors.Amber
-    else -> PanelColors.Indigo
+fun taskStatusTone(status: String) = when (status) {
+    DONE, "completed" -> PillTone.Ok
+    "in_progress" -> PillTone.Info
+    else -> PillTone.Line
 }

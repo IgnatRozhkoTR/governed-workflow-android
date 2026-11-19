@@ -38,7 +38,7 @@ fun GateWatchToggle() {
         }
     }) {
         Icon(
-            painterResource(R.drawable.ic_notification),
+            painterResource(R.drawable.ic_bell),
             contentDescription = if (isEnabled) "Stop watching gates" else "Watch gates",
             tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -1,21 +1,21 @@
 package com.ignatrozhko.governedworkflow.ui.overview
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,19 +33,34 @@ import com.ignatrozhko.governedworkflow.data.api.PendingGate
 import com.ignatrozhko.governedworkflow.data.api.PhaseNames
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceContext
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
+import com.ignatrozhko.governedworkflow.data.api.currentPhaseSince
+import com.ignatrozhko.governedworkflow.ui.common.ChoiceChip
+import com.ignatrozhko.governedworkflow.ui.common.CountBadge
+import com.ignatrozhko.governedworkflow.ui.common.DangerButton
 import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
-import com.ignatrozhko.governedworkflow.ui.common.GateBadge
-import com.ignatrozhko.governedworkflow.ui.common.PhaseChip
+import com.ignatrozhko.governedworkflow.ui.common.GateCard
+import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
+import com.ignatrozhko.governedworkflow.ui.common.PanelCard
+import com.ignatrozhko.governedworkflow.ui.common.PhaseStepper
+import com.ignatrozhko.governedworkflow.ui.common.Tag
+import com.ignatrozhko.governedworkflow.ui.common.ToggleSwitch
+import com.ignatrozhko.governedworkflow.ui.common.waitLabel
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.workspace.NotifyMessage
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceSection
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
-import com.ignatrozhko.governedworkflow.ui.workspace.common.TextInputDialog
 
+/** The deciding screen: the waiting gate first, then where the run is, then the way into every section. */
 @Composable
-fun OverviewTab(viewModel: WorkspaceViewModel, onOpenSection: (WorkspaceSection) -> Unit, modifier: Modifier = Modifier) {
+fun OverviewTab(
+    viewModel: WorkspaceViewModel,
+    onOpenSection: (WorkspaceSection) -> Unit,
+    onOpenChanges: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val context by viewModel.context.collectAsStateWithLifecycle()
     val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
@@ -55,30 +70,71 @@ fun OverviewTab(viewModel: WorkspaceViewModel, onOpenSection: (WorkspaceSection)
         if (snapshot.error != null) Text(snapshot.error.orEmpty(), modifier = modifier.padding(24.dp)) else FullScreenProgress()
         return
     }
+    val openEvidence: (GateEvidence) -> Unit = { evidence ->
+        when (evidence) {
+            GateEvidence.Changes -> onOpenChanges()
+            GateEvidence.Plan -> onOpenSection(WorkspaceSection.Plan)
+            GateEvidence.Research -> onOpenSection(WorkspaceSection.Research)
+        }
+    }
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        TicketCard(state, context, phaseNames, snapshot.error)
-        state.pendingGate?.let { gate -> GateCard(gate, isBusy, viewModel::approveGate, viewModel::rejectGate) }
-        SectionsCard(state, onOpenSection)
+        state.pendingGate?.let { gate -> PendingGateCard(gate, state, context, openEvidence) }
+        PanelCard { PhaseStepper(workflowSteps(state, phaseNames), Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) }
+        SectionChips(state, onOpenSection)
+        DetailsCard(state, context, phaseNames, snapshot.error)
         YoloCard(state.yoloMode, isBusy, viewModel::setYolo)
         NotifyCard(isBusy, viewModel::notifyClaude)
         ArchiveButton(isBusy, viewModel::archive)
     }
 }
 
-/** The top bar already names the branch, so the card only adds the ticket when the workspace has one. */
 @Composable
-private fun TicketCard(state: WorkspaceState, context: WorkspaceContext?, phaseNames: PhaseNames, loadError: String?) {
+private fun PendingGateCard(gate: PendingGate, state: WorkspaceState, context: WorkspaceContext?, onReview: (GateEvidence) -> Unit) {
+    val prompt = gatePrompt(gate)
+    val holding = state.currentPhaseSince()?.let { " · holding ${waitLabel(it)}" }.orEmpty()
+    GateCard(caption = "Gate ${gate.phase}$holding", question = prompt.question) {
+        context?.ticketName?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = Checkpoint.colors.onGateSoft)
+        }
+        Row(
+            Modifier.clickable { onReview(prompt.evidence) }.padding(top = 6.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(prompt.evidence.linkLabel, style = MaterialTheme.typography.labelLarge, color = Checkpoint.colors.onGateSoft)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, Modifier.size(20.dp), tint = Checkpoint.colors.onGateSoft)
+        }
+    }
+}
+
+/** Every section one tap away; sections with something open carry the count. */
+@Composable
+private fun SectionChips(state: WorkspaceState, onOpenSection: (WorkspaceSection) -> Unit) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WorkspaceSection.entries.forEach { section ->
+            val count = section.openCount(state)
+            ChoiceChip(
+                section.chipLabel,
+                isSelected = false,
+                onClick = { onOpenSection(section) },
+                trailing = count?.let { { CountBadge(it) } },
+            )
+        }
+    }
+}
+
+/** Ticket, description and the workspace facts the app bar has no room for. */
+@Composable
+private fun DetailsCard(state: WorkspaceState, context: WorkspaceContext?, phaseNames: PhaseNames, loadError: String?) {
     val ticket = listOfNotNull(context?.ticketId?.ifBlank { null }, context?.ticketName?.ifBlank { null }).joinToString(" · ")
     var isDescriptionExpanded by rememberSaveable { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth()) {
+    PanelCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                PhaseChip(state.phase)
+                Tag("Phase ${state.phase}")
                 phaseNames.nameFor(state.phase)?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
-                if (state.pendingGate != null) GateBadge()
             }
             if (ticket.isNotEmpty()) Text(ticket, style = MaterialTheme.typography.titleMedium)
             SecondaryText(workspaceFacts(state))
@@ -105,78 +161,26 @@ private fun workspaceFacts(state: WorkspaceState): String = listOfNotNull(
 ).joinToString(" · ")
 
 @Composable
-private fun SectionsCard(state: WorkspaceState, onOpenSection: (WorkspaceSection) -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        WorkspaceSection.entries.forEachIndexed { index, section ->
-            if (index > 0) HorizontalDivider()
-            Row(
-                Modifier.fillMaxWidth().clickable { onOpenSection(section) }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(section.title, style = MaterialTheme.typography.bodyLarge)
-                    section.summary(state)?.let { SecondaryText(it) }
-                }
-                Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun GateCard(gate: PendingGate, isBusy: Boolean, onApprove: (String) -> Unit, onReject: (String) -> Unit) {
-    var dialog by remember { mutableStateOf<GateDecision?>(null) }
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Phase ${gate.phase} is waiting for your approval", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = {
-                    if (gate.acceptsCommitMessage) dialog = GateDecision.Approve else onApprove("")
-                }, enabled = !isBusy) { Text("Approve") }
-                OutlinedButton(onClick = { dialog = GateDecision.Reject }, enabled = !isBusy) { Text("Reject") }
-            }
-        }
-    }
-    dialog?.let { decision ->
-        TextInputDialog(
-            title = decision.title,
-            label = decision.fieldLabel,
-            confirmLabel = decision.title,
-            isTextRequired = decision.isTextRequired,
-            onDismiss = { dialog = null },
-        ) { text ->
-            dialog = null
-            if (decision == GateDecision.Approve) onApprove(text) else onReject(text)
-        }
-    }
-}
-
-private enum class GateDecision(val title: String, val fieldLabel: String, val isTextRequired: Boolean) {
-    Approve("Approve and commit", "Commit message (optional)", isTextRequired = false),
-    Reject("Reject", "What should change?", isTextRequired = true),
-}
-
-@Composable
 private fun YoloCard(isEnabled: Boolean, isBusy: Boolean, onToggle: (Boolean) -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    PanelCard {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("YOLO mode", style = MaterialTheme.typography.titleSmall)
                 SecondaryText("Auto-approve user gates without asking")
             }
-            Switch(checked = isEnabled, onCheckedChange = onToggle, enabled = !isBusy)
+            ToggleSwitch(isEnabled, onToggle, isEnabled = !isBusy)
         }
     }
 }
 
 @Composable
 private fun NotifyCard(isBusy: Boolean, onNotify: (NotifyMessage) -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    PanelCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Notify Claude", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 NotifyMessage.entries.forEach { message ->
-                    OutlinedButton(onClick = { onNotify(message) }, enabled = !isBusy) { Text(message.label) }
+                    OutlinedActionButton(message.label, { onNotify(message) }, isEnabled = !isBusy, height = 36.dp)
                 }
             }
         }
@@ -186,9 +190,7 @@ private fun NotifyCard(isBusy: Boolean, onNotify: (NotifyMessage) -> Unit) {
 @Composable
 private fun ArchiveButton(isBusy: Boolean, onArchive: () -> Unit) {
     var isConfirming by remember { mutableStateOf(false) }
-    TextButton(onClick = { isConfirming = true }, enabled = !isBusy) {
-        Text("Archive workspace", color = MaterialTheme.colorScheme.error)
-    }
+    DangerButton("Archive workspace", { isConfirming = true }, isEnabled = !isBusy)
     if (isConfirming) {
         ConfirmDialog(
             title = "Archive workspace?",

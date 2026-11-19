@@ -6,19 +6,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ignatrozhko.governedworkflow.data.api.Comment
+import com.ignatrozhko.governedworkflow.ui.common.PanelCard
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 
@@ -27,9 +24,9 @@ val SectionSpacing = Arrangement.spacedBy(12.dp)
 
 @Composable
 fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier.fillMaxWidth()) {
+    PanelCard(modifier) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            title?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
+            title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             content()
         }
     }
@@ -76,16 +73,9 @@ private fun PlainMarkdown(markdown: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun StatusPill(text: String, color: Color) {
-    Surface(color = color.copy(alpha = 0.18f), contentColor = color, shape = RoundedCornerShape(50)) {
-        Text(text, Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-@Composable
 fun MonospaceBlock(text: String, modifier: Modifier = Modifier) {
-    Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp)) {
-        Text(text, Modifier.padding(10.dp), fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 16.sp)
+    Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium) {
+        Text(text, Modifier.padding(12.dp), style = MonoText.small)
     }
 }
 

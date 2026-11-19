@@ -68,6 +68,9 @@ fun AppNavHost(container: AppContainer) {
         composable<ProjectsRoute> {
             ProjectsScreen(
                 onOpenProject = { project -> navController.navigate(WorkspacesRoute(project.id, project.name)) },
+                onOpenGate = { workspace ->
+                    navController.navigate(WorkspaceRoute(workspace.projectId, workspace.branch, opensOnDecision = true))
+                },
                 onManageServers = { navController.navigate(ServersRoute) },
             )
         }
@@ -75,7 +78,9 @@ fun AppNavHost(container: AppContainer) {
             val route = entry.toRoute<WorkspacesRoute>()
             WorkspacesScreen(
                 title = route.projectName,
-                onOpenWorkspace = { branch -> navController.navigate(WorkspaceRoute(route.projectId, branch)) },
+                onOpenWorkspace = { branch, hasGate ->
+                    navController.navigate(WorkspaceRoute(route.projectId, branch, opensOnDecision = hasGate))
+                },
                 onWorkspaceCreated = { branch ->
                     navController.navigate(WorkspaceRoute(route.projectId, branch, initialSection = WorkspaceSection.Settings.name))
                 },
@@ -88,6 +93,7 @@ fun AppNavHost(container: AppContainer) {
             WorkspaceScreen(
                 workspace = WorkspaceRef(route.projectId, route.branch),
                 initialSection = route.initialSection?.let(WorkspaceSection::valueOf),
+                opensOnDecision = route.opensOnDecision,
                 onManageServers = { navController.navigate(ServersRoute) },
                 onBack = navController::popBackStack,
             )

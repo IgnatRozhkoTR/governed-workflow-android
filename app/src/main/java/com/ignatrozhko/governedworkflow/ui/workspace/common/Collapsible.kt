@@ -15,8 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,6 +32,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ignatrozhko.governedworkflow.ui.common.PanelCard
 
 /**
  * Which collapsible blocks the user opened, kept for the whole workspace visit: sections are swapped in and out of
@@ -64,7 +64,7 @@ fun CollapsibleSection(
     subtitle: String? = null,
     badge: (@Composable () -> Unit)? = null,
     initiallyExpanded: Boolean = false,
-    titleStyle: TextStyle = MaterialTheme.typography.titleSmall,
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
     horizontalPadding: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -95,7 +95,7 @@ fun CollapsibleCard(
     initiallyExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(modifier.fillMaxWidth()) {
+    PanelCard(modifier) {
         CollapsibleSection(
             title = title,
             memoryKey = memoryKey,
@@ -124,7 +124,7 @@ private fun CollapsibleHeader(
             .clickable(onClickLabel = if (isExpanded) "Collapse" else "Expand", onClick = onToggle)
             .semantics { stateDescription = if (isExpanded) "Expanded" else "Collapsed" }
             .heightIn(min = MIN_HEADER_HEIGHT)
-            .padding(horizontal = horizontalPadding, vertical = 8.dp),
+            .padding(horizontal = horizontalPadding, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -140,11 +140,11 @@ private fun CollapsibleHeader(
             }
         }
         badge?.invoke()
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, Modifier.rotate(chevronRotation), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, Modifier.rotate(chevronRotation), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 private val CARD_PADDING = 16.dp
-private val MIN_HEADER_HEIGHT = 48.dp
-private const val EXPANDED_ROTATION = 180f
+private val MIN_HEADER_HEIGHT = 52.dp
+private const val EXPANDED_ROTATION = 90f
 private const val COLLAPSED_TITLE_LINES = 2

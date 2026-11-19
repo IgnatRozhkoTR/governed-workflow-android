@@ -8,21 +8,25 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
 import com.ignatrozhko.governedworkflow.connection.ConnectionManager
-import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.NewWorkspace
+import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.PanelException
+import com.ignatrozhko.governedworkflow.data.api.PhaseNames
 import com.ignatrozhko.governedworkflow.data.api.ProjectSettings
 import com.ignatrozhko.governedworkflow.data.api.StateFetch
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceSummary
 import com.ignatrozhko.governedworkflow.data.api.createWorkspace
+import com.ignatrozhko.governedworkflow.data.api.currentPhaseSince
 import com.ignatrozhko.governedworkflow.data.api.getProjectSettings
+import com.ignatrozhko.governedworkflow.data.api.listPhases
 import com.ignatrozhko.governedworkflow.data.api.listSourceBranches
 import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.ReloadTrigger
 import com.ignatrozhko.governedworkflow.ui.common.appContainer
 import com.ignatrozhko.governedworkflow.ui.common.loadWhenConnected
 import com.ignatrozhko.governedworkflow.ui.nav.WorkspacesRoute
+import java.time.LocalDateTime
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -35,7 +39,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-data class WorkspaceRow(val summary: WorkspaceSummary, val gatePhase: String?)
+/** [gate] is the phase a live workspace is holding at, with when it started holding; null when it waits on nobody. */
+data class WorkspaceRow(val summary: WorkspaceSummary, val gate: GateHold?)
+
+data class GateHold(val phase: String, val since: LocalDateTime?)
+
+data class WorkspaceList(val rows: List<WorkspaceRow>, val phaseNames: PhaseNames) {
+    val waiting: List<WorkspaceRow> get() = rows.filter { it.gate != null }.sortedWith(compareBy(nullsLast()) { it.gate?.since })
+    val live: List<WorkspaceRow> get() = rows.filter { it.gate == null && !it.summary.isArchived }
+    val archived: List<WorkspaceRow> get() = rows.filter { it.summary.isArchived }
+}
 
 sealed interface WorkspaceCreation {
     data object Idle : WorkspaceCreation
@@ -53,7 +66,7 @@ class WorkspacesViewModel(savedStateHandle: SavedStateHandle, private val connec
     private val projectId = savedStateHandle.toRoute<WorkspacesRoute>().projectId
     private val trigger = ReloadTrigger()
 
-    val workspaces: StateFlow<LoadState<List<WorkspaceRow>>> = connectionManager
+    val workspaces: StateFlow<LoadState<WorkspaceList>> = connectionManager
         .loadWhenConnected(trigger.reloads, ::loadRows)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LoadState.Loading)
 
@@ -92,19 +105,21 @@ class WorkspacesViewModel(savedStateHandle: SavedStateHandle, private val connec
         reload()
     }
 
-    private suspend fun loadRows(api: PanelApi): List<WorkspaceRow> {
-        val summaries = api.listWorkspaces(projectId).sortedWith(compareBy({ it.isArchived }, { it.branch }))
+    private suspend fun loadRows(api: PanelApi): WorkspaceList {
+        val summaries = api.listWorkspaces(projectId).sortedBy { it.branch }
         val permits = Semaphore(MAX_PARALLEL_STATE_FETCHES)
-        return coroutineScope {
+        val rows = coroutineScope {
             summaries.map { summary ->
-                async { WorkspaceRow(summary, if (summary.isArchived) null else permits.withPermit { pendingGate(api, summary) }) }
+                async { WorkspaceRow(summary, if (summary.isArchived) null else permits.withPermit { gateHold(api, summary) }) }
             }.awaitAll()
         }
+        return WorkspaceList(rows, PhaseNames(api.listPhases()))
     }
 
-    /** The list endpoint omits gates, so each live workspace's state is read; a failed read only drops its badge. */
-    private suspend fun pendingGate(api: PanelApi, summary: WorkspaceSummary): String? = try {
-        (api.getState(WorkspaceRef(projectId, summary.branch), etag = null) as? StateFetch.Fresh)?.state?.pendingGate?.phase
+    /** The list endpoint omits gates, so each live workspace's state is read; a failed read only drops its gate. */
+    private suspend fun gateHold(api: PanelApi, summary: WorkspaceSummary): GateHold? = try {
+        val state = (api.getState(WorkspaceRef(projectId, summary.branch), etag = null) as? StateFetch.Fresh)?.state
+        state?.pendingGate?.let { GateHold(it.phase, state.currentPhaseSince()) }
     } catch (error: PanelException) {
         null
     }

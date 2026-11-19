@@ -19,7 +19,8 @@ import com.ignatrozhko.governedworkflow.data.api.ResearchFinding
 import com.ignatrozhko.governedworkflow.data.api.ResearchProof
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.commentsFor
-import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.common.Pill
+import com.ignatrozhko.governedworkflow.ui.common.PillTone
 import com.ignatrozhko.governedworkflow.ui.workspace.WorkspaceViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleSection
@@ -30,7 +31,6 @@ import com.ignatrozhko.governedworkflow.ui.workspace.common.MonospaceBlock
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
-import com.ignatrozhko.governedworkflow.ui.workspace.common.StatusPill
 import com.ignatrozhko.governedworkflow.ui.workspace.common.countLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.openCommentsLabel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
@@ -77,9 +77,9 @@ private fun ResearchCard(entry: ResearchEntry, state: WorkspaceState, viewModel:
 
 @Composable
 private fun ProofPill(status: ProofStatus) = when (status) {
-    ProofStatus.Proven -> StatusPill("proven", PanelColors.Green)
-    ProofStatus.Rejected -> StatusPill("not proven", PanelColors.Red)
-    ProofStatus.Pending -> StatusPill("awaiting proof", PanelColors.Amber)
+    ProofStatus.Proven -> Pill("proven", PillTone.Ok)
+    ProofStatus.Rejected -> Pill("not proven", PillTone.Bad)
+    ProofStatus.Pending -> Pill("awaiting proof", PillTone.Warn)
 }
 
 @Composable

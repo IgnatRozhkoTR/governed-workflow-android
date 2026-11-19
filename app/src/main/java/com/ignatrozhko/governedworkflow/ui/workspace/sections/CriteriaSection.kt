@@ -16,7 +16,8 @@ import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.listCriteria
 import com.ignatrozhko.governedworkflow.data.api.validateCriterion
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
-import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.common.Pill
+import com.ignatrozhko.governedworkflow.ui.common.PillTone
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CollapsibleCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
@@ -24,7 +25,6 @@ import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionContentPadding
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionSpacing
-import com.ignatrozhko.governedworkflow.ui.workspace.common.StatusPill
 import com.ignatrozhko.governedworkflow.ui.workspace.common.previewLine
 
 class CriteriaViewModel(workspace: WorkspaceRef, connectionManager: ConnectionManager, stateStore: WorkspaceStateStore) :
@@ -69,9 +69,9 @@ private fun CriterionCard(criterion: Criterion, isBusy: Boolean, onValidate: (Lo
 
 @Composable
 private fun ValidationPill(validated: Int) = when (validated) {
-    PASSED -> StatusPill("passed", PanelColors.Green)
-    FAILED -> StatusPill("failed", PanelColors.Red)
-    else -> StatusPill("not validated", PanelColors.Amber)
+    PASSED -> Pill("passed", PillTone.Ok)
+    FAILED -> Pill("failed", PillTone.Bad)
+    else -> Pill("not validated", PillTone.Neutral)
 }
 
 private const val CUSTOM_TYPE = "custom"

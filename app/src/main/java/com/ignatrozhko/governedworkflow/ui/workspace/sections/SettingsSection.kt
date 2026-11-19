@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +41,7 @@ import com.ignatrozhko.governedworkflow.data.api.setReviewMode
 import com.ignatrozhko.governedworkflow.data.api.setWorkflowMode
 import com.ignatrozhko.governedworkflow.data.api.updateProjectSettings
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
+import com.ignatrozhko.governedworkflow.ui.common.ToggleSwitch
 import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionCard
@@ -112,7 +112,7 @@ private fun SwitchRow(title: String, subtitle: String, isChecked: Boolean, isBus
             Text(title, style = MaterialTheme.typography.bodyLarge)
             SecondaryText(subtitle)
         }
-        Switch(checked = isChecked, onCheckedChange = onChange, enabled = !isBusy)
+        ToggleSwitch(isChecked, onChange, isEnabled = !isBusy)
     }
 }
 

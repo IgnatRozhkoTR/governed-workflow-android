@@ -5,6 +5,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 /** Authenticated reachability check against the cheapest protected endpoint. */
@@ -27,8 +30,15 @@ class PanelProbe(baseClient: OkHttpClient) {
                 else -> ProbeOutcome.Unreachable("HTTP ${result.code}")
             }
         } catch (error: IOException) {
-            ProbeOutcome.Unreachable(error.message ?: error.javaClass.simpleName)
+            ProbeOutcome.Unreachable(failureReason(error))
         }
+    }
+
+    private fun failureReason(error: IOException): String = when (error) {
+        is ConnectException -> "failed to connect"
+        is SocketTimeoutException -> "timed out"
+        is UnknownHostException -> "unknown host"
+        else -> error.message ?: error.javaClass.simpleName
     }
 
     private companion object {

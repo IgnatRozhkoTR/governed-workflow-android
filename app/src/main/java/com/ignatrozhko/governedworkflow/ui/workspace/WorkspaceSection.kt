@@ -3,34 +3,31 @@ package com.ignatrozhko.governedworkflow.ui.workspace
 import com.ignatrozhko.governedworkflow.data.api.ProofStatus
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceState
 import com.ignatrozhko.governedworkflow.data.api.reviewComments
-import com.ignatrozhko.governedworkflow.ui.workspace.common.countLabel
 
-/** Detail screens reachable from the Overview hub; one per web panel tab or settings area. */
-enum class WorkspaceSection(val title: String) {
-    PrePlanning("Pre-planning"),
-    Plan("Plan"),
-    Research("Research"),
-    Progress("Progress"),
-    Review("Review issues"),
-    Criteria("Acceptance criteria"),
-    Reflection("Reflection proposals"),
-    Scratchpads("Scratchpads"),
-    Comments("Open comments"),
-    Phase("Phase control"),
-    Settings("Settings"),
+/**
+ * Detail screens reachable from the Overview chip row; one per web panel tab or settings area. [chipLabel] is short
+ * enough for a chip, [title] heads the section screen.
+ */
+enum class WorkspaceSection(val title: String, val chipLabel: String) {
+    Plan("Plan", "Plan"),
+    Review("Review issues", "Issues"),
+    Criteria("Acceptance criteria", "Criteria"),
+    Research("Research", "Research"),
+    Progress("Progress", "Progress"),
+    Comments("Open comments", "Comments"),
+    PrePlanning("Pre-planning", "Pre-planning"),
+    Reflection("Reflection proposals", "Reflection"),
+    Scratchpads("Scratchpads", "Scratchpads"),
+    Phase("Phase control", "Phase"),
+    Settings("Settings", "Settings"),
     ;
 
-    /** One-line hub summary computed from the polled state; sections with their own endpoint have none. */
-    fun summary(state: WorkspaceState): String? = when (this) {
-        PrePlanning -> countLabel(state.discussions.size, "discussion")
-        Plan -> state.planStatus?.let { "Plan $it · ${countLabel(state.plan?.execution?.size ?: 0, "sub-phase")}" } ?: "No plan yet"
-        Research -> "${countLabel(state.research.size, "entry", "entries")} · " +
-            "${state.research.count { it.proofStatus == ProofStatus.Pending }} awaiting proof"
-        Progress -> "${countLabel(state.progress.size, "phase")} reported"
-        Review -> "${state.reviewComments().count { !it.resolved }} open"
-        Comments -> "${state.comments.values.sumOf { list -> list.count { !it.resolved } }} open"
-        Phase -> "Current ${state.phase}"
-        Settings -> listOf(state.workflowMode, state.reviewMode.replace('_', ' ')).filter { it.isNotEmpty() }.joinToString(" · ")
-        Criteria, Reflection, Scratchpads -> null
-    }
+    /** What still needs attention in the section, from the polled state; null when there is nothing to count. */
+    fun openCount(state: WorkspaceState): Int? = when (this) {
+        Review -> state.reviewComments().count { !it.resolved }
+        Comments -> state.comments.values.sumOf { list -> list.count { !it.resolved } }
+        Research -> state.research.count { it.proofStatus == ProofStatus.Pending }
+        PrePlanning -> state.discussions.size
+        Plan, Criteria, Progress, Reflection, Scratchpads, Phase, Settings -> null
+    }?.takeIf { it > 0 }
 }
