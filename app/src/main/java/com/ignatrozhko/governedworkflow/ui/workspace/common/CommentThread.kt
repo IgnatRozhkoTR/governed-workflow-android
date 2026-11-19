@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,7 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ignatrozhko.governedworkflow.data.api.Comment
+import com.ignatrozhko.governedworkflow.ui.common.LabeledField
 import com.ignatrozhko.governedworkflow.ui.common.OutlinedActionButton
+import com.ignatrozhko.governedworkflow.ui.common.PanelSheet
+import com.ignatrozhko.governedworkflow.ui.common.PrimaryButton
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 
 /** Collapsed "N comments" link that expands into the thread with resolve toggles and an add-comment action. */
@@ -130,15 +133,14 @@ fun TextInputDialog(
     onConfirm: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf(initialText) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text(label) }, minLines = 3) },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(text.trim()) }, enabled = !isTextRequired || text.isNotBlank()) { Text(confirmLabel) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+    PanelSheet(title, onDismiss) {
+        LabeledField(label, text, { text = it }, isSingleLine = false, minLines = 3)
+        Row(Modifier.fillMaxWidth()) {
+            OutlinedActionButton("Cancel", onDismiss)
+            Spacer(Modifier.weight(1f))
+            PrimaryButton(confirmLabel, { onConfirm(text.trim()) }, isEnabled = !isTextRequired || text.isNotBlank())
+        }
+    }
 }
 
 @Composable
