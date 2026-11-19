@@ -58,7 +58,7 @@ import kotlin.math.roundToInt
  */
 private val finishedRenders = LruCache<String, DiagramRender>(RENDER_CACHE_SIZE)
 
-/** A titled diagram on its own card; diagrams are the one block that starts expanded, as users came to see them. */
+/** A titled diagram on its own card; collapsed until opened, so the web view is only created on demand. */
 @Composable
 fun DiagramCard(title: String, source: String, memoryKey: String, modifier: Modifier = Modifier) {
     var isFullScreen by rememberSaveable(source) { mutableStateOf(false) }
@@ -66,7 +66,6 @@ fun DiagramCard(title: String, source: String, memoryKey: String, modifier: Modi
         title,
         memoryKey,
         modifier,
-        initiallyExpanded = true,
         badge = { FullScreenButton { isFullScreen = true } },
     ) { DiagramBody(source, memoryKey) { isFullScreen = true } }
     if (isFullScreen) FullScreenDiagram(title, source) { isFullScreen = false }
@@ -80,7 +79,6 @@ fun DiagramBlock(title: String, source: String, memoryKey: String, modifier: Mod
         title,
         memoryKey,
         modifier,
-        initiallyExpanded = true,
         titleStyle = MaterialTheme.typography.labelLarge,
         badge = { FullScreenButton { isFullScreen = true } },
     ) { DiagramBody(source, memoryKey) { isFullScreen = true } }

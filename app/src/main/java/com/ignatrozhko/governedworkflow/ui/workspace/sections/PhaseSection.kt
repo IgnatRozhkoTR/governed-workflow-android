@@ -133,7 +133,7 @@ private fun ChoiceMark(isChosen: Boolean) {
 
 @Composable
 private fun HistoryCard(history: List<PhaseTransition>) {
-    CollapsibleCard(title = "History", memoryKey = "phase:history", subtitle = "${history.size} changes", initiallyExpanded = true) {
+    CollapsibleCard(title = "History", memoryKey = "phase:history", subtitle = "${history.size} changes") {
         history.forEach { transition ->
             val ago = transition.occurredAt()?.let { "${waitLabel(it)} ago" } ?: transition.time
             Text("${transition.from} to ${transition.to} · $ago", style = MonoText.small, color = MaterialTheme.colorScheme.onSurfaceVariant)
