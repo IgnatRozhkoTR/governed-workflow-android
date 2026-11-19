@@ -109,9 +109,10 @@ private fun NavHostController.showProjectsAsRoot() {
 /**
  * Single-top matching compares only the destination, not its arguments, so it would reuse an open workspace's entry
  * (and its view models) for a different workspace. Only a link to the workspace already on top is a no-op.
+ * Links come from gate notifications, so they land on the decision rather than the terminal.
  */
 private fun NavHostController.openLinkedWorkspace(workspace: WorkspaceRef) {
     val top = currentBackStackEntry?.takeIf { it.destination.hasRoute<WorkspaceRoute>() }?.toRoute<WorkspaceRoute>()
     if (top?.projectId == workspace.projectId && top.branch == workspace.branch) return
-    navigate(WorkspaceRoute(workspace.projectId, workspace.branch))
+    navigate(WorkspaceRoute(workspace.projectId, workspace.branch, opensOnDecision = true))
 }
