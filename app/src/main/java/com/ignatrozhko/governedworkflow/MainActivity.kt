@@ -5,8 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.ignatrozhko.governedworkflow.data.settings.ThemeMode
 import com.ignatrozhko.governedworkflow.gates.GateWatchService
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.nav.AppNavHost
@@ -22,7 +27,9 @@ class MainActivity : ComponentActivity() {
         container.workspaceLinks.request(intent)
         resumeGateWatchIfEnabled(container)
         setContent {
-            GovernedWorkflowTheme {
+            val themeMode by container.settings.themeMode.collectAsStateWithLifecycle(initialValue = null)
+            val chosenMode = themeMode ?: return@setContent
+            GovernedWorkflowTheme(isNight = chosenMode.isNight()) {
                 CompositionLocalProvider(LocalAppContainer provides container) {
                     AppNavHost(container)
                 }
@@ -33,6 +40,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         (application as GovernedWorkflowApp).container.workspaceLinks.request(intent)
+    }
+
+    @Composable
+    private fun ThemeMode.isNight(): Boolean = when (this) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Day -> false
+        ThemeMode.Night -> true
     }
 
     /** A foreground service may only be started while the app is visible, so the opt-in watcher is resumed here. */

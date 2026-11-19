@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -20,10 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ignatrozhko.governedworkflow.connection.ConnectionManager
 import com.ignatrozhko.governedworkflow.data.api.FAST_WORKFLOW_MODE
 import com.ignatrozhko.governedworkflow.data.api.ModuleInfo
@@ -41,15 +44,19 @@ import com.ignatrozhko.governedworkflow.data.api.setEnabledModules
 import com.ignatrozhko.governedworkflow.data.api.setReviewMode
 import com.ignatrozhko.governedworkflow.data.api.setWorkflowMode
 import com.ignatrozhko.governedworkflow.data.api.updateProjectSettings
+import com.ignatrozhko.governedworkflow.data.settings.ThemeMode
 import com.ignatrozhko.governedworkflow.data.workspace.WorkspaceStateStore
 import com.ignatrozhko.governedworkflow.ui.common.ChoiceChip
 import com.ignatrozhko.governedworkflow.ui.common.FieldLabel
 import com.ignatrozhko.governedworkflow.ui.common.LabeledField
+import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.common.PanelCard
+import com.ignatrozhko.governedworkflow.ui.common.SegmentedChoice
 import com.ignatrozhko.governedworkflow.ui.common.ToggleSwitch
 import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SecondaryText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.SectionDataViewModel
+import kotlinx.coroutines.launch
 
 data class SettingsData(
     val project: ProjectSettings,
@@ -107,6 +114,7 @@ fun SettingsSection(state: WorkspaceState, data: SettingsData, viewModel: Settin
             ClaudeCommandField(data.claudeCommand, isBusy, viewModel::setClaudeCommand)
         }
         ProjectDefaultsGroup(data.project, isBusy, viewModel::updateProjectDefaults)
+        SettingsGroup("This app") { ThemeRow() }
         ModulesGroup(data.modules, data.enabledModules, isBusy, viewModel::setEnabledModules)
     }
 }
@@ -141,6 +149,26 @@ private fun ReviewModeRow(title: String, current: String, isBusy: Boolean, onSel
                 ChoiceChip(mode.label, isSelected = mode.wireValue == current, onClick = { if (!isBusy) onSelect(mode) })
             }
         }
+    }
+}
+
+@Composable
+private fun ThemeRow() {
+    val settings = LocalAppContainer.current.settings
+    val scope = rememberCoroutineScope()
+    val themeMode by settings.themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.System)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text("Theme", style = MaterialTheme.typography.bodyLarge)
+            SecondaryText("Follow system, day or night")
+        }
+        SegmentedChoice(
+            ThemeMode.entries,
+            themeMode,
+            ThemeMode::label,
+            onSelect = { scope.launch { settings.setThemeMode(it) } },
+            modifier = Modifier.width(THEME_CHOICE_WIDTH),
+        )
     }
 }
 
@@ -194,3 +222,5 @@ private fun ModulesGroup(modules: List<ModuleInfo>, enabled: Set<String>, isBusy
         }
     }
 }
+
+private val THEME_CHOICE_WIDTH = 176.dp

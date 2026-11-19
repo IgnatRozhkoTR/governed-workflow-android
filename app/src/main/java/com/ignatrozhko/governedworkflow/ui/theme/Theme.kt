@@ -3,18 +3,22 @@ package com.ignatrozhko.governedworkflow.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.Color
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 
 private val CheckpointShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
@@ -34,7 +38,7 @@ object Checkpoint {
         get() = LocalCheckpointColors.current
 }
 
-/** Night and day are separate token sets that follow the system setting; the system bar icons follow the active one. */
+/** Night and day are separate token sets, following the system unless the user picked one; the system bars follow the active one. */
 @Composable
 fun GovernedWorkflowTheme(isNight: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     SystemBarAppearance(isNight)
@@ -52,12 +56,14 @@ fun GovernedWorkflowTheme(isNight: Boolean = isSystemInDarkTheme(), content: @Co
 private fun SystemBarAppearance(isNight: Boolean) {
     val view = LocalView.current
     if (view.isInEditMode) return
-    SideEffect {
-        val window = view.context.findActivity()?.window ?: return@SideEffect
-        WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = !isNight
-            isAppearanceLightNavigationBars = !isNight
-        }
+    LaunchedEffect(isNight) {
+        val activity = view.context.findActivity() as? ComponentActivity ?: return@LaunchedEffect
+        val lightScrim = DayColors.background.copy(alpha = NAVIGATION_SCRIM_ALPHA).toArgb()
+        val darkScrim = NightColors.background.copy(alpha = NAVIGATION_SCRIM_ALPHA).toArgb()
+        activity.enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { isNight },
+            navigationBarStyle = SystemBarStyle.auto(lightScrim, darkScrim) { isNight },
+        )
     }
 }
 
@@ -66,3 +72,5 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+private const val NAVIGATION_SCRIM_ALPHA = 0.9f
