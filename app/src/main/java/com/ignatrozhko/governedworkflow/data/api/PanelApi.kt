@@ -136,7 +136,7 @@ class PanelApi(
         val message = ERROR_MESSAGE_FIELDS.firstNotNullOfOrNull { name ->
             (fields?.get(name) as? JsonPrimitive)?.takeIf { it.isString }?.content
         }
-        return message ?: result.body.trim().ifEmpty { "HTTP ${result.code}" }
+        return message?.let { READABLE_ERROR_CODES[it] ?: it } ?: result.body.trim().ifEmpty { "HTTP ${result.code}" }
     }
 
     internal companion object {
@@ -147,5 +147,10 @@ class PanelApi(
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
 
         private val ERROR_MESSAGE_FIELDS = listOf("details", "reason", "message", "error")
+        private val READABLE_ERROR_CODES = mapOf(
+            "repo_required" to "Choose a repository to see its changes.",
+            "repo_not_found" to "This repository's checkout is missing on the panel host.",
+            "invalid_repo" to "The panel rejected this repository path.",
+        )
     }
 }

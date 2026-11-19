@@ -5,10 +5,14 @@ import kotlinx.serialization.json.put
 
 /** Code review endpoints: diffs, history, line comments and annotations. */
 
-suspend fun PanelApi.getDiff(workspace: WorkspaceRef, source: DiffSource): List<DiffFile> {
+suspend fun PanelApi.listRepos(workspace: WorkspaceRef): List<CodeRepo> =
+    get(PanelPaths.workspace(baseUrl, workspace, "repos"), ReposResponse.serializer()).repos
+
+suspend fun PanelApi.getDiff(workspace: WorkspaceRef, repo: CodeRepo, source: DiffSource): List<DiffFile> {
     val url = PanelPaths.workspace(baseUrl, workspace, "diff").withQuery(
         "mode" to source.modeParameter,
         "commit" to (source as? DiffSource.Commit)?.sha,
+        "repo" to repo.queryValue,
     )
     return get(url, DiffResponse.serializer()).files
 }
@@ -30,8 +34,10 @@ sealed interface DiffSource {
     }
 }
 
-suspend fun PanelApi.getHistory(workspace: WorkspaceRef): List<CommitInfo> =
-    get(PanelPaths.workspace(baseUrl, workspace, "history"), HistoryResponse.serializer()).commits
+suspend fun PanelApi.getHistory(workspace: WorkspaceRef, repo: CodeRepo): List<CommitInfo> {
+    val url = PanelPaths.workspace(baseUrl, workspace, "history").withQuery("repo" to repo.queryValue)
+    return get(url, HistoryResponse.serializer()).commits
+}
 
 suspend fun PanelApi.listComments(workspace: WorkspaceRef, includeResolved: Boolean): List<Comment> {
     val url = PanelPaths.workspace(baseUrl, workspace, "comments").withQuery("resolved" to if (includeResolved) "true" else null)
@@ -71,8 +77,9 @@ enum class ReviewResolution(val wireValue: String, val label: String) {
 }
 
 /** Annotations are re-anchored to the working tree, or to [commitSha]'s content when a single commit is shown. */
-suspend fun PanelApi.listAnnotations(workspace: WorkspaceRef, filePath: String, commitSha: String?): List<Annotation> {
-    val url = PanelPaths.workspace(baseUrl, workspace, "annotations").withQuery("file" to filePath, "ref" to commitSha)
+suspend fun PanelApi.listAnnotations(workspace: WorkspaceRef, repo: CodeRepo, filePath: String, commitSha: String?): List<Annotation> {
+    val url = PanelPaths.workspace(baseUrl, workspace, "annotations")
+        .withQuery("file" to filePath, "ref" to commitSha, "repo" to repo.queryValue)
     return get(url, AnnotationsResponse.serializer()).annotations
 }
 

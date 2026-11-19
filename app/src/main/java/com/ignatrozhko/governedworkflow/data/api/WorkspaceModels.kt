@@ -223,6 +223,20 @@ data class DiffFile(
     val diff: String = "",
 )
 
+/** A git repository the Changes tab can diff; [path] "." is the workspace itself in a single-repo project. */
+@Serializable
+data class CodeRepo(val name: String, val path: String) {
+    /** The panel resolves a missing `repo` to the workspace root, which is the only form older panels understand. */
+    val queryValue: String? get() = path.takeUnless { it == WORKSPACE_ROOT }
+
+    private companion object {
+        const val WORKSPACE_ROOT = "."
+    }
+}
+
+@Serializable
+internal data class ReposResponse(val repos: List<CodeRepo> = emptyList())
+
 @Serializable
 internal data class DiffResponse(val files: List<DiffFile> = emptyList())
 

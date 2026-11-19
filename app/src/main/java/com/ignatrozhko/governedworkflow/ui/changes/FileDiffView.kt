@@ -28,11 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ignatrozhko.governedworkflow.data.api.Annotation
 import com.ignatrozhko.governedworkflow.data.api.Comment
@@ -44,7 +42,8 @@ import com.ignatrozhko.governedworkflow.data.diff.DiffLineKind
 import com.ignatrozhko.governedworkflow.data.diff.SyntaxHighlighter
 import com.ignatrozhko.governedworkflow.data.diff.SyntaxKind
 import com.ignatrozhko.governedworkflow.data.diff.UnifiedDiffParser
-import com.ignatrozhko.governedworkflow.ui.theme.PanelColors
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 import com.ignatrozhko.governedworkflow.ui.workspace.common.CommentCard
 import com.ignatrozhko.governedworkflow.ui.workspace.common.ConfirmDialog
 import com.ignatrozhko.governedworkflow.ui.workspace.common.MarkdownText
@@ -144,7 +143,7 @@ private fun DiffRow(line: DiffLine, highlighter: SyntaxHighlighter, onLongPressL
         }
         LineNumber(line.oldNumber)
         LineNumber(line.newNumber)
-        CodeText(highlighted(line, highlighter), Modifier.weight(1f).padding(start = 4.dp, end = 8.dp))
+        CodeText(highlighted(line, highlighter, syntaxColors()), Modifier.weight(1f).padding(start = 4.dp, end = 8.dp))
     }
 }
 
@@ -153,8 +152,7 @@ private fun LineNumber(number: Int?) {
     Text(
         number?.toString().orEmpty(),
         Modifier.width(GUTTER_WIDTH),
-        fontFamily = FontFamily.Monospace,
-        fontSize = CODE_FONT_SIZE,
+        style = MonoText.small,
         textAlign = TextAlign.End,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
     )
@@ -162,10 +160,10 @@ private fun LineNumber(number: Int?) {
 
 @Composable
 private fun CodeText(text: AnnotatedString, modifier: Modifier, color: Color = MaterialTheme.colorScheme.onSurface) {
-    Text(text, modifier, fontFamily = FontFamily.Monospace, fontSize = CODE_FONT_SIZE, lineHeight = 16.sp, color = color)
+    Text(text, modifier, style = MonoText.small, color = color)
 }
 
-private fun highlighted(line: DiffLine, highlighter: SyntaxHighlighter): AnnotatedString {
+private fun highlighted(line: DiffLine, highlighter: SyntaxHighlighter, colors: SyntaxColors): AnnotatedString {
     val marker = when (line.kind) {
         DiffLineKind.Added -> "+"
         DiffLineKind.Removed -> "-"
@@ -175,22 +173,33 @@ private fun highlighted(line: DiffLine, highlighter: SyntaxHighlighter): Annotat
         append(marker)
         append(line.text)
         highlighter.highlight(line.text).forEach { span ->
-            addStyle(syntaxStyle(span.kind), span.start + marker.length, span.end + marker.length)
+            addStyle(colors.styleFor(span.kind), span.start + marker.length, span.end + marker.length)
         }
     }
 }
 
-private fun syntaxStyle(kind: SyntaxKind) = when (kind) {
-    SyntaxKind.Keyword -> SpanStyle(color = Color(0xFFC792EA))
-    SyntaxKind.StringLiteral -> SpanStyle(color = Color(0xFFC3E88D))
-    SyntaxKind.Comment -> SpanStyle(color = Color(0xFF7F8C98), fontStyle = FontStyle.Italic)
-    SyntaxKind.Number -> SpanStyle(color = Color(0xFFF78C6C))
+private class SyntaxColors(val keyword: Color, val string: Color, val comment: Color, val number: Color) {
+    fun styleFor(kind: SyntaxKind) = when (kind) {
+        SyntaxKind.Keyword -> SpanStyle(color = keyword)
+        SyntaxKind.StringLiteral -> SpanStyle(color = string)
+        SyntaxKind.Comment -> SpanStyle(color = comment, fontStyle = FontStyle.Italic)
+        SyntaxKind.Number -> SpanStyle(color = number)
+    }
 }
 
+@Composable
+private fun syntaxColors() = SyntaxColors(
+    keyword = MaterialTheme.colorScheme.primary,
+    string = Checkpoint.colors.ok,
+    comment = MaterialTheme.colorScheme.onSurfaceVariant,
+    number = Checkpoint.colors.warn,
+)
+
+@Composable
 private fun rowBackground(kind: DiffLineKind) = when (kind) {
-    DiffLineKind.Added -> PanelColors.Green.copy(alpha = 0.14f)
-    DiffLineKind.Removed -> PanelColors.Red.copy(alpha = 0.14f)
-    DiffLineKind.Hunk -> PanelColors.Indigo.copy(alpha = 0.12f)
+    DiffLineKind.Added -> Checkpoint.colors.diffAddBg
+    DiffLineKind.Removed -> Checkpoint.colors.diffDelBg
+    DiffLineKind.Hunk -> MaterialTheme.colorScheme.surfaceVariant
     DiffLineKind.Context, DiffLineKind.Note -> Color.Transparent
 }
 
@@ -207,7 +216,7 @@ private fun AnnotationNote(annotation: Annotation, viewModel: ChangesViewModel) 
             Text(
                 AnnotationPreview.of(annotation.text),
                 fontStyle = FontStyle.Italic,
-                fontSize = CODE_FONT_SIZE,
+                style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -235,4 +244,3 @@ private fun AnnotationNote(annotation: Annotation, viewModel: ChangesViewModel) 
 }
 
 private val GUTTER_WIDTH = 30.dp
-private val CODE_FONT_SIZE = 12.sp
