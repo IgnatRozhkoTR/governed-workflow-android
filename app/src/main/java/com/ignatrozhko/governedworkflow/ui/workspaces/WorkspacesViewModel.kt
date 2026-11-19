@@ -107,13 +107,15 @@ class WorkspacesViewModel(savedStateHandle: SavedStateHandle, private val connec
 
     private suspend fun loadRows(api: PanelApi): WorkspaceList {
         val summaries = api.listWorkspaces(projectId).sortedBy { it.branch }
+        val phaseNames = PhaseNames(api.listPhases())
         val permits = Semaphore(MAX_PARALLEL_STATE_FETCHES)
         val rows = coroutineScope {
             summaries.map { summary ->
-                async { WorkspaceRow(summary, if (summary.isArchived) null else permits.withPermit { gateHold(api, summary) }) }
+                val canHoldGate = !summary.isArchived && phaseNames.canHoldGate(summary.phase)
+                async { WorkspaceRow(summary, if (canHoldGate) permits.withPermit { gateHold(api, summary) } else null) }
             }.awaitAll()
         }
-        return WorkspaceList(rows, PhaseNames(api.listPhases()))
+        return WorkspaceList(rows, phaseNames)
     }
 
     /** The list endpoint omits gates, so each live workspace's state is read; a failed read only drops its gate. */
@@ -126,7 +128,7 @@ class WorkspacesViewModel(savedStateHandle: SavedStateHandle, private val connec
 
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
-        private const val MAX_PARALLEL_STATE_FETCHES = 4
+        private const val MAX_PARALLEL_STATE_FETCHES = 6
 
         val Factory = viewModelFactory {
             initializer { WorkspacesViewModel(createSavedStateHandle(), appContainer.connectionManager) }

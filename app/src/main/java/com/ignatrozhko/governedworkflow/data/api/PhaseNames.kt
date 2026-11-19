@@ -9,6 +9,8 @@ class PhaseNames(private val catalogue: List<PhaseInfo>) {
 
     fun isUserGate(phaseId: String): Boolean = find(phaseId)?.isUserGate == true
 
+    fun canHoldGate(phaseId: String): Boolean = find(phaseId)?.isUserGate ?: true
+
     fun label(phaseId: String): String = nameFor(phaseId)?.let { "$phaseId · $it" } ?: phaseId
 
     private fun find(phaseId: String): PhaseInfo? =

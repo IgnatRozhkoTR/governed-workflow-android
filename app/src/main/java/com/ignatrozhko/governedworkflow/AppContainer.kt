@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -30,6 +31,7 @@ class AppContainer(context: Context) {
         context.preferencesDataStoreFile(DATA_STORE_NAME)
     }
     private val httpClient = OkHttpClient.Builder()
+        .dispatcher(Dispatcher().apply { maxRequestsPerHost = MAX_REQUESTS_PER_HOST })
         .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
@@ -66,5 +68,6 @@ class AppContainer(context: Context) {
         const val CONNECT_TIMEOUT_SECONDS = 5L
         const val READ_TIMEOUT_SECONDS = 20L
         const val SOCKET_PING_SECONDS = 15L
+        const val MAX_REQUESTS_PER_HOST = 8
     }
 }
