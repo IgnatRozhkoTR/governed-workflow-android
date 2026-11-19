@@ -162,7 +162,6 @@ private fun DetailsCard(state: WorkspaceState, context: WorkspaceContext?, phase
 
 private fun workspaceFacts(state: WorkspaceState): String = listOfNotNull(
     state.status.ifBlank { null },
-    state.sourceBranch?.let { "from $it" },
     state.workflowMode.ifBlank { null },
     state.planStatus?.let { "plan $it" },
 ).joinToString(" · ")
