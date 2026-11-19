@@ -83,7 +83,8 @@ fun WorkspaceScreen(
     var isTerminalFullScreen by rememberSaveable { mutableStateOf(false) }
     val openPath by changesViewModel.openPath.collectAsStateWithLifecycle()
     val changedFiles by changesViewModel.files.collectAsStateWithLifecycle()
-    val changedFileCount = (changedFiles as? LoadState.Loaded)?.data?.size ?: 0
+    val changedFileList = (changedFiles as? LoadState.Loaded)?.data.orEmpty()
+    val changedFileCount = changedFileList.size
     val openFile = (changedFiles as? LoadState.Loaded)?.data?.firstOrNull { it.path == openPath }
     val isArchived by workspaceViewModel.isArchived.collectAsStateWithLifecycle()
     val snapshot by workspaceViewModel.snapshot.collectAsStateWithLifecycle()
@@ -160,7 +161,7 @@ fun WorkspaceScreen(
                 val contentModifier = Modifier.weight(1f)
                 when (tab) {
                     WorkspaceTab.Overview -> CompositionLocalProvider(LocalExpansionMemory provides workspaceViewModel.expansionMemory) {
-                        OverviewContent(section, workspaceViewModel, navigation, { tab = WorkspaceTab.Changes }, snackbarHostState, contentModifier)
+                        OverviewContent(section, workspaceViewModel, navigation, changedFileList, { tab = WorkspaceTab.Changes }, snackbarHostState, contentModifier)
                     }
                     WorkspaceTab.Changes -> ChangesTab(changesViewModel, onManageServers, contentModifier)
                     WorkspaceTab.Terminal -> TerminalTab(
@@ -199,12 +200,13 @@ private fun OverviewContent(
     section: WorkspaceSection?,
     viewModel: WorkspaceViewModel,
     navigation: SectionNavigation,
+    changedFiles: List<DiffFile>,
     onOpenChanges: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier,
 ) {
     if (section == null) {
-        OverviewTab(viewModel, navigation.openSection, onOpenChanges, modifier)
+        OverviewTab(viewModel, navigation.openSection, changedFiles, onOpenChanges, modifier)
         return
     }
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()

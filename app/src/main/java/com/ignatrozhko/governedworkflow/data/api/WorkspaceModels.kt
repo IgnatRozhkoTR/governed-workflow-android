@@ -277,3 +277,19 @@ internal data class ModulesResponse(val modules: List<ModuleInfo> = emptyList())
 
 @Serializable
 internal data class EnabledModulesResponse(val modules: List<String> = emptyList())
+
+/** Latest verification run of a workspace; the panel answers a bare message, decoded as a blank status, when nothing ran yet. */
+@Serializable
+data class VerificationRun(val status: String = "", val steps: List<VerificationStep> = emptyList()) {
+    val hasRun: Boolean get() = status.isNotBlank()
+    val passedSteps: Int get() = steps.count { it.status == PASSED_STEP_STATUS }
+}
+
+private const val PASSED_STEP_STATUS = "passed"
+
+@Serializable
+data class VerificationStep(
+    val status: String = "",
+    @SerialName("profile_name") val profileName: String = "",
+    @SerialName("step_name") val stepName: String = "",
+)

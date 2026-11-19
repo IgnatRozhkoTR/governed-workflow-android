@@ -131,3 +131,6 @@ suspend fun PanelApi.setEnabledModules(moduleIds: Set<String>) {
     val body = buildJsonObject { put("modules", JsonArray(moduleIds.map(::JsonPrimitive))) }
     send("POST", PanelPaths.api(baseUrl, "api/modules/enabled"), body)
 }
+
+suspend fun PanelApi.getVerificationRun(workspace: WorkspaceRef): VerificationRun? =
+    get(PanelPaths.workspace(baseUrl, workspace, "verification/results"), VerificationRun.serializer()).takeIf { it.hasRun }

@@ -12,6 +12,8 @@ import java.time.format.DateTimeParseException
 fun WorkspaceState.currentPhaseSince(): LocalDateTime? =
     phaseHistory.lastOrNull { it.to == phase }?.time?.let(::parsePanelTime)
 
+fun PhaseTransition.occurredAt(): LocalDateTime? = parsePanelTime(time)
+
 private fun parsePanelTime(text: String): LocalDateTime? = try {
     LocalDateTime.parse(text)
 } catch (naive: DateTimeParseException) {

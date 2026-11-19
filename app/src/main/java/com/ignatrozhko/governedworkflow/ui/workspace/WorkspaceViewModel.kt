@@ -5,10 +5,12 @@ import com.ignatrozhko.governedworkflow.connection.ConnectionManager
 import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.PhaseNames
 import com.ignatrozhko.governedworkflow.data.api.PlanDecision
+import com.ignatrozhko.governedworkflow.data.api.VerificationRun
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceContext
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.api.addDiscussion
 import com.ignatrozhko.governedworkflow.data.api.archiveWorkspace
+import com.ignatrozhko.governedworkflow.data.api.getVerificationRun
 import com.ignatrozhko.governedworkflow.data.api.listPhases
 import com.ignatrozhko.governedworkflow.data.api.replyToDiscussion
 import com.ignatrozhko.governedworkflow.data.api.setPhase
@@ -35,10 +37,12 @@ class WorkspaceViewModel(
     private val _context = MutableStateFlow<WorkspaceContext?>(null)
     private val _isArchived = MutableStateFlow(false)
     private val _phaseNames = MutableStateFlow(PhaseNames(emptyList()))
+    private val _verification = MutableStateFlow<VerificationRun?>(null)
 
     val context: StateFlow<WorkspaceContext?> = _context.asStateFlow()
     val isArchived: StateFlow<Boolean> = _isArchived.asStateFlow()
     val phaseNames: StateFlow<PhaseNames> = _phaseNames.asStateFlow()
+    val verification: StateFlow<VerificationRun?> = _verification.asStateFlow()
     val expansionMemory = ExpansionMemory()
 
     init {
@@ -57,6 +61,10 @@ class WorkspaceViewModel(
         connectionManager.loadWhenConnected(flowOf(0), load)
             .first { it is LoadState.Loaded || it is LoadState.Failed }
             .let { (it as? LoadState.Loaded)?.data }
+
+    fun refreshVerification() {
+        viewModelScope.launch { _verification.value = loadOrNull { it.getVerificationRun(workspace) } }
+    }
 
     fun approveGate(commitMessage: String) = act("Approved") { it.approve(workspace, commitMessage) }
 
