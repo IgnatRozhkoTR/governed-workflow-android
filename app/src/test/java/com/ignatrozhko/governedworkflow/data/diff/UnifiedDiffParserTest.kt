@@ -32,7 +32,7 @@ class UnifiedDiffParserTest {
 
         assertEquals(DiffLine(DiffLineKind.Context, "    return value * 39", 122, 122), lines[0])
         assertEquals(DiffLine(DiffLineKind.Removed, "    return value * 40", oldNumber = 123), lines[1])
-        assertEquals(DiffLine(DiffLineKind.Added, "    return value * 40 + 1", newNumber = 123), lines[2])
+        assertEquals(DiffLine(DiffLineKind.Added, "    return value * 40 + 1", newNumber = 123, changedRange = 21..24), lines[2])
         assertEquals(DiffLine(DiffLineKind.Added, "    # tweak", newNumber = 124), lines[3])
         assertEquals(DiffLine(DiffLineKind.Context, "", 124, 125), lines[4])
     }

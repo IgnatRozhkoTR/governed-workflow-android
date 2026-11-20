@@ -13,6 +13,7 @@ class WorkspaceEndpointsTest {
     private val server = MockWebServer()
     private lateinit var api: PanelApi
     private val workspace = WorkspaceRef("qa-shop", "qa/commit-ready")
+    private val rootRepo = CodeRepo("workspace", ".")
 
     @Before
     fun setUp() {
@@ -74,7 +75,7 @@ class WorkspaceEndpointsTest {
     fun getDiff_shouldQueryCommitMode_withSha() = runTest {
         respond("""{"files":[{"path":"src/pricing.py","additions":1,"deletions":1,"diff":"@@ -1 +1 @@"}],"mode":"commit"}""")
 
-        val files = api.getDiff(workspace, DiffSource.Commit("abc123", "Tweak"))
+        val files = api.getDiff(workspace, rootRepo, DiffSource.Commit("abc123", "Tweak"))
 
         assertEquals("/api/ws/qa-shop/qa/commit-ready/diff?mode=commit&commit=abc123", server.takeRequest().path)
         assertEquals("src/pricing.py", files.single().path)
@@ -84,7 +85,7 @@ class WorkspaceEndpointsTest {
     fun getDiff_shouldOmitMode_forBranchDiff() = runTest {
         respond("""{"files":[]}""")
 
-        api.getDiff(workspace, DiffSource.Branch)
+        api.getDiff(workspace, rootRepo, DiffSource.Branch)
 
         assertEquals("/api/ws/qa-shop/qa/commit-ready/diff", server.takeRequest().path)
     }
@@ -93,7 +94,7 @@ class WorkspaceEndpointsTest {
     fun listAnnotations_shouldPassCommitAsRef_andEncodeFilePath() = runTest {
         respond("""{"annotations":[{"id":1,"file_path":"src/a b.py","line_start":2,"line_end":4,"text":"Note"}]}""")
 
-        val annotations = api.listAnnotations(workspace, "src/a b.py", commitSha = "abc")
+        val annotations = api.listAnnotations(workspace, rootRepo, "src/a b.py", commitSha = "abc")
 
         assertEquals("/api/ws/qa-shop/qa/commit-ready/annotations?file=src%2Fa%20b.py&ref=abc", server.takeRequest().path)
         assertEquals(4, annotations.single().lineEnd)
