@@ -12,6 +12,7 @@ import com.ignatrozhko.governedworkflow.data.api.PanelApi
 import com.ignatrozhko.governedworkflow.data.api.PanelException
 import com.ignatrozhko.governedworkflow.data.api.WorkspaceRef
 import com.ignatrozhko.governedworkflow.data.settings.AppSettings
+import com.ignatrozhko.governedworkflow.data.settings.ExtraKeysMode
 import com.ignatrozhko.governedworkflow.terminal.core.StickyKey
 import com.ignatrozhko.governedworkflow.terminal.core.StickyModifiers
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalConnectionState
@@ -65,6 +66,7 @@ class TerminalViewModel(
     val messages: Flow<String> = _messages.receiveAsFlow()
     val stickyModifiers = MutableStateFlow(StickyModifiers())
     val fontSize: StateFlow<Int?> = settings.terminalFontSize.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val extraKeysMode: StateFlow<ExtraKeysMode?> = settings.extraKeysMode.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
@@ -83,6 +85,10 @@ class TerminalViewModel(
 
     fun setFontSize(size: Int) {
         viewModelScope.launch { settings.setTerminalFontSize(size) }
+    }
+
+    fun setExtraKeysMode(mode: ExtraKeysMode) {
+        viewModelScope.launch { settings.setExtraKeysMode(mode) }
     }
 
     fun select(target: TerminalTarget) {

@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -27,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ignatrozhko.governedworkflow.R
@@ -34,20 +38,10 @@ import com.ignatrozhko.governedworkflow.terminal.core.TerminalInput
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalTarget
 import com.ignatrozhko.governedworkflow.terminal.view.TerminalHostView
 import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
+import com.ignatrozhko.governedworkflow.ui.common.StatusDot
 import com.ignatrozhko.governedworkflow.ui.common.readClipboardText
 import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
-
-/** How much chrome surrounds the terminal; the screen picks it from orientation, keyboard and the full-screen toggle. */
-enum class TerminalChrome {
-    /** Slim top row and two key rows. */
-    Normal,
-
-    /** No top row; a small handle restores the chrome. */
-    FullScreen,
-
-    /** Landscape with the keyboard up: no top row and a single key row, so a few terminal lines stay visible. */
-    KeyboardLandscape,
-}
+import com.ignatrozhko.governedworkflow.ui.theme.MonoText
 
 @Composable
 fun TerminalTab(
@@ -64,6 +58,7 @@ fun TerminalTab(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val fontSize by viewModel.fontSize.collectAsStateWithLifecycle()
     val sticky by viewModel.stickyModifiers.collectAsStateWithLifecycle()
+    val keysMode by viewModel.extraKeysMode.collectAsStateWithLifecycle()
     var hostView by remember { mutableStateOf<TerminalHostView?>(null) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbarHostState.showSnackbar(it) } }
 
@@ -74,11 +69,13 @@ fun TerminalTab(
         state.workspaceStatus == WorkspaceSessionStatus.Live
 
     Column(modifier.fillMaxSize()) {
-        if (chrome == TerminalChrome.Normal) {
+        if (chrome.isHeaderShown) {
             TerminalTopRow(
                 state = state,
                 canKill = isTerminalShown,
                 hasGate = gatePhase != null,
+                keysMode = keysMode,
+                onKeysModeChange = viewModel::setExtraKeysMode,
                 onBack = onBack,
                 onSelect = viewModel::select,
                 onRefresh = viewModel::refreshSessions,
@@ -88,7 +85,7 @@ fun TerminalTab(
             )
         }
         Column(Modifier.weight(1f).fillMaxWidth().terminalFrame(chrome)) {
-            if (gatePhase != null && chrome == TerminalChrome.Normal) TerminalGateStrip(gatePhase, onOpenGate)
+            if (gatePhase != null && chrome.isHeaderShown) TerminalGateStrip(gatePhase, onOpenGate)
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val initialFontSize = fontSize
                 when {
@@ -103,22 +100,27 @@ fun TerminalTab(
                         TerminalPane(session, input, initialFontSize, viewModel::setFontSize, onHostView = { hostView = it })
                     }
                 }
-                if (chrome == TerminalChrome.FullScreen) {
-                    ExitFullScreenHandle(Modifier.align(Alignment.TopEnd)) { onFullScreenChange(false) }
+                if (chrome.isFullScreen) {
+                    ExitFullScreenButton(hasGate = gatePhase != null, Modifier.align(Alignment.TopEnd)) { onFullScreenChange(false) }
+                }
+                val mode = keysMode
+                if (isTerminalShown && mode != null) {
+                    ExtraKeysHandle(chrome.showsKeys(mode), Modifier.align(Alignment.BottomEnd)) {
+                        viewModel.setExtraKeysMode(mode.toggled(chrome.isKeyboardOpen))
+                    }
                 }
             }
         }
-        if (isTerminalShown) {
-            val rows = if (chrome == TerminalChrome.KeyboardLandscape) ExtraKeyLayout.oneRow else ExtraKeyLayout.twoRows
-            ExtraKeysBar(rows, sticky, onAction = { action -> perform(action, input, hostView, viewModel) })
+        if (isTerminalShown && keysMode?.let(chrome::showsKeys) == true) {
+            ExtraKeysBar(chrome.keyRows, sticky, onAction = { action -> perform(action, input, hostView, viewModel) })
         }
     }
 }
 
-/** A rounded, outlined box in normal chrome; edge to edge when every row of the terminal counts. */
+/** A rounded, outlined box under the header; edge to edge when every row of the terminal counts. */
 @Composable
 private fun Modifier.terminalFrame(chrome: TerminalChrome): Modifier {
-    if (chrome != TerminalChrome.Normal) return this
+    if (!chrome.isHeaderShown) return this
     val shape = MaterialTheme.shapes.large
     return padding(start = 12.dp, end = 12.dp, bottom = 8.dp).clip(shape).border(1.dp, MaterialTheme.colorScheme.outline, shape)
 }
@@ -139,18 +141,50 @@ private fun TerminalGateStrip(phase: String, onOpen: () -> Unit) {
     }
 }
 
-/** Translucent so it does not hide the terminal text underneath. */
+/** Translucent so it does not hide the output; the orange dot keeps a waiting gate visible while the gate strip is gone. */
 @Composable
-private fun ExitFullScreenHandle(modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.padding(4.dp).size(44.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-    ) {
-        Icon(painterResource(R.drawable.ic_fullscreen_exit), contentDescription = "Exit full screen", modifier = Modifier.padding(6.dp))
+private fun ExitFullScreenButton(hasGate: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(modifier.padding(4.dp)) {
+        Surface(
+            onClick = onClick,
+            modifier = Modifier.size(TOUCH_TARGET),
+            shape = CircleShape,
+            color = translucentSurface(),
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            Icon(painterResource(R.drawable.ic_fullscreen_exit), contentDescription = "Exit full screen", modifier = Modifier.padding(10.dp))
+        }
+        if (hasGate) StatusDot(Checkpoint.colors.gate, Modifier.align(Alignment.TopEnd).padding(4.dp))
     }
 }
+
+/** Sits on the terminal's bottom edge right above the keys, so it stays in the same place whether they are shown or not. */
+@Composable
+private fun ExtraKeysHandle(isExpanded: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .size(width = HANDLE_WIDTH, height = TOUCH_TARGET)
+            .clickable(onClickLabel = if (isExpanded) "Hide keys" else "Show keys", role = Role.Button, onClick = onClick)
+            .padding(end = 6.dp, bottom = 4.dp),
+        contentAlignment = Alignment.BottomEnd,
+    ) {
+        Row(
+            Modifier.background(translucentSurface(), CircleShape).padding(start = 8.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("keys", style = MonoText.small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                if (isExpanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun translucentSurface() = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = OVERLAY_ALPHA)
 
 private fun perform(action: ExtraKeyAction, input: TerminalInput, hostView: TerminalHostView?, viewModel: TerminalViewModel) {
     hostView?.ensureFocus()
@@ -163,3 +197,7 @@ private fun perform(action: ExtraKeyAction, input: TerminalInput, hostView: Term
         ExtraKeyAction.ToggleKeyboard -> hostView?.toggleKeyboard()
     }
 }
+
+private val TOUCH_TARGET = 44.dp
+private val HANDLE_WIDTH = 72.dp
+private const val OVERLAY_ALPHA = 0.7f

@@ -51,6 +51,7 @@ import com.ignatrozhko.governedworkflow.ui.changes.ChangesViewModel
 import com.ignatrozhko.governedworkflow.ui.common.CountBadge
 import com.ignatrozhko.governedworkflow.ui.common.FullScreenProgress
 import com.ignatrozhko.governedworkflow.ui.common.GateBar
+import com.ignatrozhko.governedworkflow.ui.common.ImmersiveMode
 import com.ignatrozhko.governedworkflow.ui.common.LoadState
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
 import com.ignatrozhko.governedworkflow.ui.common.OfflineBanner
@@ -60,6 +61,7 @@ import com.ignatrozhko.governedworkflow.ui.overview.OverviewTab
 import com.ignatrozhko.governedworkflow.ui.terminal.TerminalChrome
 import com.ignatrozhko.governedworkflow.ui.terminal.TerminalTab
 import com.ignatrozhko.governedworkflow.ui.terminal.TerminalViewModel
+import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.workspace.common.EmptySection
 import com.ignatrozhko.governedworkflow.ui.workspace.common.LocalExpansionMemory
 import kotlinx.coroutines.flow.Flow
@@ -103,14 +105,12 @@ fun WorkspaceScreen(
 
     val isImeVisible = WindowInsets.isImeVisible
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val terminalChrome = when {
-        isLandscape && isImeVisible -> TerminalChrome.KeyboardLandscape
-        isTerminalFullScreen -> TerminalChrome.FullScreen
-        else -> TerminalChrome.Normal
-    }
+    val terminalChrome = TerminalChrome(isFullScreen = isTerminalFullScreen, isKeyboardOpen = isImeVisible, isLandscape = isLandscape)
     val isTerminal = tab == WorkspaceTab.Terminal
     val isOverviewRoot = tab == WorkspaceTab.Overview && section == null
-    val isNavigationShown = !isImeVisible && !(isTerminal && terminalChrome != TerminalChrome.Normal)
+    val isNavigationShown = !isImeVisible && !(isTerminal && !terminalChrome.isHeaderShown)
+    ImmersiveMode(isImmersive = isTerminal && isTerminalFullScreen)
+    BackHandler(enabled = isTerminal && isTerminalFullScreen) { isTerminalFullScreen = false }
     val openDecision = {
         section = null
         tab = WorkspaceTab.Overview
@@ -162,6 +162,7 @@ fun WorkspaceScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = if (isTerminal && isTerminalFullScreen) Checkpoint.colors.terminalBg else MaterialTheme.colorScheme.background,
     ) { padding ->
         Row(Modifier.padding(padding).consumeWindowInsets(padding)) {
             if (isNavigationShown && isLandscape) WorkspaceNavigationRail(tab, changedFileCount) { tab = it }

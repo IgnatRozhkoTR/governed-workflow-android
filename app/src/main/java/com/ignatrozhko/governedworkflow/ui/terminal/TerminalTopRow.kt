@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -27,9 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ignatrozhko.governedworkflow.R
+import com.ignatrozhko.governedworkflow.data.settings.ExtraKeysMode
 import com.ignatrozhko.governedworkflow.terminal.core.TerminalTarget
 import com.ignatrozhko.governedworkflow.ui.common.ChoiceChip
 import com.ignatrozhko.governedworkflow.ui.common.LocalAppContainer
@@ -39,7 +43,7 @@ import com.ignatrozhko.governedworkflow.ui.theme.Checkpoint
 import com.ignatrozhko.governedworkflow.ui.common.ConfirmDialog
 
 /**
- * Title row with back, connection dot and menu, then the sessions as one scrolling chip row. [hasGate] marks the
+ * Title row with back, connection dot, full screen and menu, then the sessions as one scrolling chip row. [hasGate] marks the
  * workspace's own session with the gate dot.
  */
 @Composable
@@ -47,6 +51,8 @@ fun TerminalTopRow(
     state: TerminalUiState,
     canKill: Boolean,
     hasGate: Boolean,
+    keysMode: ExtraKeysMode?,
+    onKeysModeChange: (ExtraKeysMode) -> Unit,
     onBack: () -> Unit,
     onSelect: (TerminalTarget) -> Unit,
     onRefresh: () -> Unit,
@@ -63,12 +69,23 @@ fun TerminalTopRow(
         Text("Terminal", Modifier.padding(start = 4.dp, end = 10.dp), style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp))
         StatusDot(connectionStatus(connection).first)
         Spacer(Modifier.weight(1f))
+        IconButton(onClick = onEnterFullScreen) { Icon(painterResource(R.drawable.ic_fullscreen), contentDescription = "Full screen") }
         Box {
             IconButton(onClick = { isMenuOpen = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Terminal actions") }
             DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
                 MenuItem("Full screen") {
                     isMenuOpen = false
                     onEnterFullScreen()
+                }
+                if (keysMode != null) {
+                    DropdownMenuItem(
+                        text = { Text("Keys only with keyboard") },
+                        trailingIcon = { if (keysMode == ExtraKeysMode.WithKeyboard) Icon(Icons.Filled.Check, contentDescription = "On") },
+                        onClick = {
+                            isMenuOpen = false
+                            onKeysModeChange(keysMode.withKeyboardToggled())
+                        },
+                    )
                 }
                 MenuItem("Refresh sessions") {
                     isMenuOpen = false
